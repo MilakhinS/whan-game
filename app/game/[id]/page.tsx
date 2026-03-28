@@ -348,13 +348,16 @@ export default function GamePage() {
   }
 
   function sendReaction(emoji: string) {
+    if (mySeat < 0) return
     playSound('reaction')
     const id = Date.now()
+    // Show locally immediately
     setReactions(prev=>[...prev, {seat:mySeat, emoji, id}])
-    // Broadcast via game state reactions field
+    setTimeout(()=>setReactions(prev=>prev.filter(r=>r.id!==id)), 2500)
+    // Broadcast to others via supabase
+    if (!gs) return
     const newGs = {...gs, reactions:[...(gs.reactions||[]), {seat:mySeat, emoji, id, ts:Date.now()}].slice(-20)}
     supabase.from('game_states').update({ state:newGs, updated_at:new Date().toISOString() }).eq('room_id',roomId)
-    setTimeout(()=>setReactions(prev=>prev.filter(r=>r.id!==id)), 2500)
   }
 
   function showPassAnim(seat: number) {
@@ -728,7 +731,16 @@ export default function GamePage() {
         </div>
 
         {/* My hand - hidden for spectator */}
-        {!isSpectator && <div style={{ ...panel(), padding:'8px 6px', marginBottom:8, border:`1.5px solid ${isMyTurn?GOLD+'66':'rgba(201,168,76,0.1)'}`, boxShadow:isMyTurn?`0 0 18px ${GOLD_GLOW}`:'none', transition:'all 0.3s' }}>
+        {!isSpectator && <div style={{ ...panel(), padding:'8px 6px', marginBottom:8, border:`1.5px solid ${isMyTurn?GOLD+'66':'rgba(201,168,76,0.1)'}`, boxShadow:isMyTurn?`0 0 18px ${GOLD_GLOW}`:'none', transition:'all 0.3s', position:'relative' }}>
+          {/* My reaction bubble */}
+          <AnimatePresence>
+            {reactions.filter(r=>r.seat===mySeat).slice(-1).map(r=>(
+              <motion.div key={r.id} initial={{y:0,opacity:1,scale:0.5}} animate={{y:-40,opacity:0,scale:1.6}} transition={{duration:2}}
+                style={{ position:'absolute', top:-10, left:'50%', transform:'translateX(-50%)', fontSize:26, zIndex:10, pointerEvents:'none' }}>
+                {r.emoji}
+              </motion.div>
+            ))}
+          </AnimatePresence>
           <div style={{ fontSize:9, color:'rgba(201,168,76,0.35)', textAlign:'center', marginBottom:6, letterSpacing:2 }}>
             {myDone?'ВЫШЕЛ 🎉':`ТВОИ КАРТЫ (${myHand.length})`}
           </div>
