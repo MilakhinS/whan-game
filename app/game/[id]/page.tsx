@@ -376,7 +376,6 @@ export default function GamePage() {
     if (gs.currentPlayer===mySeat && !isSpectator) return
     if (animRef.current) return
 
-    // Act if current player is a bot OR a spectator (waiting for next round)
     const botSeats: number[] = gs.botSeats || []
     const spectatorSeats: number[] = (gs.spectators||[])
       .filter((s:any)=>s.joinRound===gs.round)
@@ -384,34 +383,45 @@ export default function GamePage() {
     const shouldAct = botSeats.includes(gs.currentPlayer) || spectatorSeats.includes(gs.currentPlayer)
     if (!shouldAct) return
 
-    // Only the host (seat 0) controls bots to avoid conflicts
-    // If no bots, skip. If mySeat is not the lowest real player seat, skip.
-    const realSeats = Array.from({length:gs.playerCount||gs.playerNames?.length||4},(_,i)=>i).filter((s:number)=>!botSeats.includes(s))
+    const realSeats = Array.from({length:gs.playerCount||gs.playerNames?.length||4},(_,i)=>i).filter((s:number)=>!botSeats.includes(s) && !spectatorSeats.includes(s))
     const hostSeat = realSeats.length > 0 ? Math.min(...realSeats) : 0
     if (mySeat !== hostSeat) return
 
+    // Snapshot current player to detect stale closures
+    const actingPlayer = gs.currentPlayer
+    const actingPassCount = gs.passCount
+
     const t = setTimeout(async()=>{
       if (animRef.current) return
-      animRef.current=true
+      // Re-fetch fresh state to avoid stale data
+      const { data } = await supabase.from('game_states').select('state').eq('room_id',roomId).single()
+      if (!data) return
+      const freshGs = data.state
+      // Guard: make sure it's still this bot's turn
+      if (freshGs.currentPlayer !== actingPlayer || freshGs.passCount !== actingPassCount) return
+      if (freshGs.phase !== 'playing') return
+
+      animRef.current = true
       try {
-        const p = gs.currentPlayer
-        const pc = gs.playerCount || gs.playerNames?.length || (gs.mode==='team'?4:6)
-        const hand: Card[] = gs.hands[p]||[]
-        if (!hand.length || gs.eliminated.includes(p)) {
-          await pushState({...gs,currentPlayer:nextActive(p,gs.eliminated,pc)})
+        const p = freshGs.currentPlayer
+        const pc = freshGs.playerCount || freshGs.playerNames?.length || (freshGs.mode==='team'?4:6)
+        const hand: Card[] = freshGs.hands[p]||[]
+        if (!hand.length || freshGs.eliminated.includes(p)) {
+          await pushState({...freshGs, currentPlayer:nextActive(p,freshGs.eliminated,pc)})
           return
         }
-        const playCards = aiChoosePlay(hand, gs.tableCombo, false)
+        const playCards = aiChoosePlay(hand, freshGs.tableCombo, false)
         if (playCards) {
           const combo = detectCombo(playCards)
-          if (combo && (!gs.tableCombo || canBeat(gs.tableCombo,combo))) {
-            await applyPlay(gs, p, playCards)
-          } else { await applyPass(gs, p) }
-        } else { await applyPass(gs, p) }
+          if (combo && (!freshGs.tableCombo || canBeat(freshGs.tableCombo,combo))) {
+            await applyPlay(freshGs, p, playCards)
+          } else { await applyPass(freshGs, p) }
+        } else { await applyPass(freshGs, p) }
       } finally {
-        animRef.current=false
+        setTimeout(()=>{ animRef.current=false }, 800)
       }
-    }, 900)
+    }, 1800) // 1.8 seconds — enough to see cards on table
+
     return ()=>{ clearTimeout(t); animRef.current=false }
   },[gs?.currentPlayer, gs?.phase, gs?.passCount, mySeat])
 
