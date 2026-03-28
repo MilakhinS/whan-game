@@ -7,7 +7,7 @@ export const RANK_ORDER = ['4','5','6','7','8','9','10','J','Q','K','A','2','3',
 export const POWER: Record<string,number> = Object.fromEntries(RANK_ORDER.map((r,i)=>[r,i]))
 
 export type Card = { rank: string; suit: string; id: string }
-export type ComboType = 'single'|'pair'|'triple'|'quad'|'straight'
+export type ComboType = 'single'|'pair'|'triple'|'quad'|'straight'|'ashlan'
 export type Combo = { type: ComboType; power: number; length?: number; cards: Card[] }
 export type GamePhase = 'playing'|'roundEnd'
 
@@ -46,8 +46,44 @@ export function sortHand(h: Card[]): Card[] {
   })
 }
 
+// ── ASHLAN: 3+ consecutive pairs (e.g. 5-5/6-6/7-7) ─────────
+// No jokers/wilds/specials allowed in ashlan
+function detectAshlan(cards: Card[]): Combo | null {
+  if (cards.length < 6) return null
+  if (cards.length % 2 !== 0) return null
+  // No specials
+  if (cards.some(c => isJk(c) || isW(c) || ['2','3'].includes(c.rank))) return null
+  // Group by rank
+  const byRank: Record<string, Card[]> = {}
+  for (const c of cards) {
+    if (!byRank[c.rank]) byRank[c.rank] = []
+    byRank[c.rank].push(c)
+  }
+  const ranks = Object.keys(byRank)
+  // All groups must be pairs
+  if (!ranks.every(r => byRank[r].length === 2)) return null
+  // Must be consecutive
+  const powers = ranks.map(r => POWER[r]).sort((a,b)=>a-b)
+  for (let i=1;i<powers.length;i++) {
+    if (powers[i] !== powers[i-1]+1) return null
+  }
+  return {
+    type: 'ashlan',
+    power: powers[powers.length-1],
+    length: cards.length / 2, // number of pairs
+    cards
+  }
+}
+
 export function detectCombo(cards: Card[]): Combo | null {
   if (!cards?.length) return null
+
+  // Try ashlan first (3+ consecutive pairs)
+  if (cards.length >= 6 && cards.length % 2 === 0) {
+    const ash = detectAshlan(cards)
+    if (ash) return ash
+  }
+
   const n = cards.length
   const wilds = cards.filter(isW)
   const real  = cards.filter(c=>!isW(c))
@@ -93,13 +129,24 @@ export function detectCombo(cards: Card[]): Combo | null {
 }
 
 export function canBeat(atk: Combo, def: Combo): boolean {
+  // Quad beats everything
   if (def.type === 'quad') return true
+  // Red Joker single can't be beaten except by quad
   if (atk.type === 'single' && isRJ(atk.cards[0])) return false
+  // Ashlan: can only be beaten by quad
+  if (atk.type === 'ashlan') return false // already handled quad above
+  // Triple beats single/pair/straight/ashlan (not triple/quad)
   if (def.type === 'triple') {
-    if (['single','pair','straight'].includes(atk.type)) return true
+    if (['single','pair','straight','ashlan'].includes(atk.type)) return true
     if (atk.type === 'triple') return def.power > atk.power
     return false
   }
+  // Ashlan can only be beaten by quad (handled above) or higher ashlan of same length
+  if (atk.type === 'ashlan') {
+    if (def.type === 'ashlan') return def.length === atk.length && def.power > atk.power
+    return false
+  }
+  // Same type comparison
   if (atk.type === def.type) {
     if (atk.type === 'straight') return def.length === atk.length && def.power > atk.power
     return def.power > atk.power
@@ -117,8 +164,9 @@ export const TEAMS = [[0,2],[1,3]]
 
 export function comboLabel(c: Combo): string {
   const labels: Record<string,string> = {
-    single:'Одиночка', pair:'Пара', triple:'Тройка', quad:'Каре', straight:'Стрит'
+    single:'Одиночка', pair:'Пара', triple:'Тройка', quad:'Каре', straight:'Стрит', ashlan:'Ашлян'
   }
+  if (c.type === 'ashlan') return `Ашлян (${c.length} пар)`
   return `${labels[c.type]||c.type}${c.type==='straight'?` ×${c.length}`:''}`
 }
 
@@ -133,7 +181,7 @@ function groupByRank(hand: Card[]) {
 }
 
 export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: boolean): Card[]|null {
-  if (mustFirst) { const c=hand.find(is4S); return c?[c]:null }
+  // mustFirst just means this player goes first — they can play ANY valid combo
   const wilds = hand.filter(isW)
   const byRank = groupByRank(hand)
   const sorted = sortHand(hand.filter(c=>!isW(c)))
@@ -176,12 +224,17 @@ export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: bo
     }
     return null
   }
+  if (type==='ashlan') {
+    // Try to beat with quad
+    for (const [,cards] of Object.entries(byRank)) { if(cards.length>=4) return cards.slice(0,4) }
+    return null
+  }
   return null
 }
 
 // ── Initial game state ───────────────────────────────────────
 export function createInitialGameState(playerNames: string[], mode: 'team'|'solo', scores=[0,0], round=1) {
-  const playerCount = playerNames.length // Use exact count from names array
+  const playerCount = playerNames.length
   const deck = shuffle(createDeck())
   const hands: Card[][] = Array.from({length:playerCount},()=>[])
   deck.forEach((card,i) => hands[i%playerCount].push(card))
@@ -197,16 +250,16 @@ export function createInitialGameState(playerNames: string[], mode: 'team'|'solo
     lastPlayer: null as number|null,
     passCount: 0,
     eliminated: [] as number[],
-    mustPlay4S: true,
+    mustPlay4S: false, // 4♠ just determines WHO goes first, not what they must play
     phase: 'playing' as GamePhase,
     winner: null as number|string|null,
     winPoints: 1,
     scores,
     round,
     playerNames,
-    playerCount, // store actual count
+    playerCount,
     mode,
     crownPlayer: null as number|null,
-    log: [`Игра началась • ${playerNames[sp]} ходит первым (4♠)`],
+    log: [`Игра началась • ${playerNames[sp]} ходит первым (у него 4♠)`],
   }
 }

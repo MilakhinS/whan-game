@@ -193,7 +193,7 @@ export default function GamePage() {
         await pushState({...gs,currentPlayer:nextActive(p,gs.eliminated,pc)})
         animRef.current=false; return
       }
-      const mustFirst = gs.mustPlay4S && hand.some(is4S)
+      const mustFirst = false // 4♠ only determines who goes first, not what to play
       const playCards = aiChoosePlay(hand, gs.tableCombo, mustFirst)
       if (playCards) {
         const combo = detectCombo(playCards)
@@ -214,10 +214,6 @@ export default function GamePage() {
     if (!selCards.length) return
     const combo = detectCombo(selCards)
     if (!combo) { showToast('❌ Недопустимая комбинация'); return }
-    const iHave4S = myHand.some(is4S)
-    if (gs.mustPlay4S && iHave4S) {
-      if (!(selCards.length===1 && is4S(selCards[0]))) { showToast('❌ Первый ход — нужна 4♠'); return }
-    }
     if (gs.tableCombo && !canBeat(gs.tableCombo,combo)) { showToast('❌ Не бьёт стол'); return }
     await applyPlay(gs, mySeat, selCards)
     setSelected([])
@@ -226,8 +222,6 @@ export default function GamePage() {
   async function handlePass() {
     if (!gs || gs.currentPlayer!==mySeat) return
     if (!gs.tableCombo) { showToast('❌ Нельзя пасовать на пустом столе'); return }
-    const iHave4S = (gs.hands[mySeat]||[]).some(is4S)
-    if (gs.mustPlay4S && iHave4S) { showToast('❌ Нужно сыграть 4♠'); return }
     await applyPass(gs, mySeat)
     setSelected([])
   }
