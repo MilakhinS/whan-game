@@ -82,26 +82,40 @@ export default function GamePage() {
 
   const [gs, setGs]           = useState<any>(null)
   const [myId, setMyId]       = useState('')
+  const [myUsername, setMyUsername] = useState('')
   const [mySeat, setMySeat]   = useState(0)
   const [selected, setSelected] = useState<string[]>([])
   const [show4S, setShow4S]   = useState(false)
   const [toast, setToast]     = useState('')
   const [animating, setAnimating] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [logOpen, setLogOpen]   = useState(false)
+  const [messages, setMessages] = useState<any[]>([])
+  const [msgInput, setMsgInput] = useState('')
   const animRef = useRef(false)
+  const chatRef = useRef<HTMLDivElement>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
+
+  useEffect(()=>{
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
+  },[messages, chatOpen])
 
   useEffect(()=>{
     supabase.auth.getUser().then(({data})=>{
       if (!data.user) { router.push('/auth'); return }
       setMyId(data.user.id)
-      // Get my seat
       supabase.from('room_players').select('seat').eq('room_id',roomId).eq('player_id',data.user.id).single().then(({data:p})=>{ if(p) setMySeat(p.seat) })
+      supabase.from('profiles').select('username').eq('id',data.user.id).single().then(({data:p})=>{ if(p) setMyUsername(p.username) })
     })
     loadGameState()
+    loadMessages()
 
     const ch = supabase.channel(`game-${roomId}`)
       .on('postgres_changes',{event:'*',schema:'public',table:'game_states',filter:`room_id=eq.${roomId}`},({new:n})=>{ if(n) setGs((n as any).state) })
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'room_messages',filter:`room_id=eq.${roomId}`},(payload)=>{
+        setMessages(prev=>[...prev, payload.new])
+      })
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
   },[roomId])
@@ -109,6 +123,23 @@ export default function GamePage() {
   async function loadGameState() {
     const { data } = await supabase.from('game_states').select('state').eq('room_id',roomId).single()
     if (data) setGs(data.state)
+  }
+
+  async function loadMessages() {
+    const { data } = await supabase.from('room_messages').select('*').eq('room_id',roomId).order('created_at',{ascending:true}).limit(50)
+    if (data) setMessages(data)
+  }
+
+  async function sendMessage() {
+    const msg = msgInput.trim()
+    if (!msg || !myUsername) return
+    setMsgInput('')
+    await supabase.from('room_messages').insert({ room_id:roomId, player_id:myId, username:myUsername, message:msg })
+  }
+
+  function formatTime(ts: string) {
+    const d = new Date(ts)
+    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
   }
 
   async function pushState(newGs: any) {
@@ -379,21 +410,74 @@ export default function GamePage() {
         </div>}
 
         {/* Buttons */}
-        <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+        <div style={{ display:'flex', gap:8, marginBottom:8 }}>
           {gs.phase==='roundEnd' ? <>
             <button onClick={nextRound} style={gbtn(true,{flex:1} as any)}>▶ Новый раунд</button>
             <button onClick={()=>router.push('/')} style={gbtn(false,{flex:1,color:GOLD_DIM,border:`1px solid ${GOLD_DIM}33`,cursor:'pointer'} as any)}>Лобби</button>
           </> : <>
             <button onClick={handlePlay} disabled={!isMyTurn||!selCards.length} style={gbtn(isMyTurn&&!!selCards.length,{flex:2} as any)}>ИГРАТЬ</button>
             <button onClick={handlePass} disabled={!isMyTurn||!gs.tableCombo} style={gbtn(false,{flex:1,color:isMyTurn&&gs.tableCombo?GOLD:GOLD_DIM,border:`1px solid ${isMyTurn&&gs.tableCombo?GOLD_DIM:'rgba(255,255,255,0.05)'}`,cursor:isMyTurn&&gs.tableCombo?'pointer':'not-allowed'} as any)}>ПАС</button>
+            <button onClick={()=>setChatOpen(o=>!o)} style={{ padding:'10px 12px', borderRadius:12, border:`1px solid ${chatOpen?GOLD:'rgba(201,168,76,0.2)'}`, background:chatOpen?`rgba(201,168,76,0.15)`:'rgba(255,255,255,0.03)', color:chatOpen?GOLD:'rgba(201,168,76,0.5)', cursor:'pointer', fontSize:16, position:'relative' }}>
+              💬
+              {messages.length>0 && !chatOpen && <div style={{ position:'absolute', top:4, right:4, width:6, height:6, borderRadius:'50%', background:GOLD }}/>}
+            </button>
           </>}
         </div>
 
-        {/* Log */}
-        <div style={{ ...panel(), padding:'6px 10px', fontSize:10, color:'rgba(201,168,76,0.4)', maxHeight:65, overflowY:'auto', border:'1px solid rgba(201,168,76,0.06)' }}>
-          {(gs.log||[]).length===0 ? <span style={{opacity:0.4}}>Журнал…</span>
-            : (gs.log||[]).map((l:string,i:number)=><div key={i} style={{borderBottom:'1px solid rgba(201,168,76,0.04)',padding:'1px 0'}}>{l}</div>)}
-        </div>
+        {/* Log dropdown */}
+        <button onClick={()=>setLogOpen(o=>!o)} style={{ width:'100%', padding:'7px 12px', borderRadius:10, border:'1px solid rgba(201,168,76,0.08)', background:'rgba(255,255,255,0.02)', color:'rgba(201,168,76,0.4)', cursor:'pointer', fontFamily:'inherit', fontSize:11, display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:logOpen?0:0 }}>
+          <span>📋 История ходов</span>
+          <span>{logOpen?'▲':'▼'}</span>
+        </button>
+        <AnimatePresence>
+          {logOpen && (
+            <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} style={{ overflow:'hidden' }}>
+              <div style={{ ...panel(), padding:'8px 10px', fontSize:10, color:'rgba(201,168,76,0.45)', maxHeight:140, overflowY:'auto', border:'1px solid rgba(201,168,76,0.06)', borderRadius:12, marginTop:4 }}>
+                {(gs.log||[]).length===0 ? <span style={{opacity:0.4}}>Нет ходов</span>
+                  : (gs.log||[]).map((l:string,i:number)=><div key={i} style={{borderBottom:'1px solid rgba(201,168,76,0.04)',padding:'2px 0'}}>{l}</div>)}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Chat side panel */}
+        <AnimatePresence>
+          {chatOpen && (
+            <motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} transition={{type:'spring',damping:24,stiffness:200}}
+              style={{ position:'fixed', top:0, right:0, bottom:0, width:280, background:'rgba(8,4,1,0.97)', borderLeft:'1px solid rgba(201,168,76,0.2)', zIndex:50, display:'flex', flexDirection:'column', backdropFilter:'blur(20px)' }}>
+              {/* Chat header */}
+              <div style={{ padding:'14px 14px 10px', borderBottom:'1px solid rgba(201,168,76,0.1)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ fontSize:13, fontWeight:600, color:GOLD }}>💬 Чат</div>
+                <button onClick={()=>setChatOpen(false)} style={{ background:'transparent', border:'none', color:'rgba(201,168,76,0.5)', fontSize:18, cursor:'pointer' }}>×</button>
+              </div>
+              {/* Messages */}
+              <div ref={chatRef} style={{ flex:1, overflowY:'auto', padding:'10px', display:'flex', flexDirection:'column', gap:8 }}>
+                {messages.length===0 && <div style={{ textAlign:'center', color:'rgba(201,168,76,0.2)', fontSize:12, marginTop:40, fontStyle:'italic' }}>Напиши первым! 👋</div>}
+                {messages.map((msg:any)=>{
+                  const isMe = msg.player_id===myId
+                  return (
+                    <div key={msg.id} style={{ display:'flex', flexDirection:isMe?'row-reverse':'row', gap:6, alignItems:'flex-end' }}>
+                      <div style={{ maxWidth:'85%' }}>
+                        {!isMe && <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', marginBottom:2, paddingLeft:4 }}>{msg.username}</div>}
+                        <div style={{ background:isMe?'linear-gradient(135deg,#3d2a00,#6b4a0a)':'rgba(255,255,255,0.06)', border:`1px solid ${isMe?'rgba(201,168,76,0.3)':'rgba(255,255,255,0.08)'}`, borderRadius:isMe?'12px 12px 4px 12px':'12px 12px 12px 4px', padding:'7px 10px', fontSize:12, color:'#e8d5a3', lineHeight:1.4, wordBreak:'break-word' }}>
+                          {msg.message}
+                        </div>
+                        <div style={{ fontSize:9, color:'rgba(201,168,76,0.25)', marginTop:2, paddingLeft:4, textAlign:isMe?'right':'left' }}>{formatTime(msg.created_at)}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {/* Input */}
+              <div style={{ padding:'10px', borderTop:'1px solid rgba(201,168,76,0.1)', display:'flex', gap:6 }}>
+                <input style={{ flex:1, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:10, padding:'8px 10px', color:'#e8d5a3', fontSize:12, outline:'none', fontFamily:'inherit' }}
+                  placeholder="Сообщение…" value={msgInput} onChange={e=>setMsgInput(e.target.value)}
+                  onKeyDown={e=>e.key==='Enter'&&sendMessage()} maxLength={200}/>
+                <button onClick={sendMessage} disabled={!msgInput.trim()} style={{ padding:'8px 12px', borderRadius:10, cursor:msgInput.trim()?'pointer':'default', border:`1px solid ${GOLD}44`, background:msgInput.trim()?`${GOLD}22`:'transparent', color:msgInput.trim()?GOLD:'rgba(201,168,76,0.3)', fontSize:13 }}>➤</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div style={{ position:'fixed', bottom:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${GOLD},transparent)`, zIndex:10 }}/>
       </div>
