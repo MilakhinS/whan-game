@@ -209,20 +209,6 @@ export default function GamePage() {
     }
   },[gs?.round])
 
-  // ── Sync reactions from other players ──
-  useEffect(()=>{
-    if (!gs?.reactions) return
-    const recent = gs.reactions.filter((r:any)=>r.seat!==mySeat && Date.now()-r.ts < 3000)
-    if (recent.length===0) return
-    const latest = recent[recent.length-1]
-    setReactions(prev=>{
-      if (prev.some(p=>p.id===latest.id)) return prev
-      const updated = [...prev, {seat:latest.seat, emoji:latest.emoji, id:latest.id}]
-      setTimeout(()=>setReactions(p=>p.filter(r=>r.id!==latest.id)), 2500)
-      return updated
-    })
-  },[gs?.reactions])
-
   // ── Sound on table change ──
   useEffect(()=>{
     if (!gs?.tableCombo) return
@@ -318,6 +304,14 @@ export default function GamePage() {
         setMessages(prev=>[...prev, payload.new])
         setUnreadCount(prev => prev + 1)
       })
+      .on('broadcast',{event:'reaction'},(payload)=>{
+        const {seat, emoji, id} = payload.payload
+        setReactions(prev=>{
+          if (prev.some(r=>r.id===id)) return prev
+          setTimeout(()=>setReactions(p=>p.filter(r=>r.id!==id)), 2500)
+          return [...prev, {seat, emoji, id}]
+        })
+      })
       .subscribe()
     
     // Polling fallback every 3 seconds
@@ -354,10 +348,12 @@ export default function GamePage() {
     // Show locally immediately
     setReactions(prev=>[...prev, {seat:mySeat, emoji, id}])
     setTimeout(()=>setReactions(prev=>prev.filter(r=>r.id!==id)), 2500)
-    // Broadcast to others via supabase
-    if (!gs) return
-    const newGs = {...gs, reactions:[...(gs.reactions||[]), {seat:mySeat, emoji, id, ts:Date.now()}].slice(-20)}
-    supabase.from('game_states').update({ state:newGs, updated_at:new Date().toISOString() }).eq('room_id',roomId)
+    // Broadcast to all players in room via Supabase Realtime
+    supabase.channel(`game-${roomId}`).send({
+      type: 'broadcast',
+      event: 'reaction',
+      payload: { seat:mySeat, emoji, id }
+    })
   }
 
   function showPassAnim(seat: number) {
