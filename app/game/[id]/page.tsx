@@ -120,19 +120,47 @@ export default function GamePage() {
   const [selected, setSelected] = useState<string[]>([])
   const [show4S, setShow4S]   = useState(false)
   const [toast, setToast]     = useState('')
-  const [animating, setAnimating] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [logOpen, setLogOpen]   = useState(false)
   const [messages, setMessages] = useState<any[]>([])
   const [msgInput, setMsgInput] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
   const animRef = useRef(false)
   const chatRef = useRef<HTMLDivElement>(null)
-
-  const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
+  const prevMsgCount = useRef(0)
 
   useEffect(()=>{
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   },[messages, chatOpen])
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
+
+  // Unread counter
+  useEffect(()=>{
+    if (chatOpen) {
+      setUnreadCount(0)
+      prevMsgCount.current = messages.length
+    }
+  },[chatOpen])
+
+  useEffect(()=>{
+    if (!chatOpen && messages.length > prevMsgCount.current) {
+      setUnreadCount(messages.length - prevMsgCount.current)
+    }
+    if (chatOpen) prevMsgCount.current = messages.length
+  },[messages.length])
+
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(()=>{
+    if (chatOpen) setUnreadCount(0)
+  },[chatOpen])
+
+  useEffect(()=>{
+    if (!chatOpen && messages.length > 0) {
+      setUnreadCount(prev => prev + 1)
+    }
+  },[messages.length])
 
   useEffect(()=>{
     supabase.auth.getUser().then(({data})=>{
@@ -148,6 +176,10 @@ export default function GamePage() {
       .on('postgres_changes',{event:'*',schema:'public',table:'game_states',filter:`room_id=eq.${roomId}`},({new:n})=>{ if(n) setGs((n as any).state) })
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'room_messages',filter:`room_id=eq.${roomId}`},(payload)=>{
         setMessages(prev=>[...prev, payload.new])
+        setChatOpen(open => {
+          if (!open) setUnread(u=>u+1)
+          return open
+        })
       })
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
@@ -466,9 +498,13 @@ export default function GamePage() {
           </> : <>
             <button onClick={handlePlay} disabled={!isMyTurn||!selCards.length} style={gbtn(isMyTurn&&!!selCards.length,{flex:2} as any)}>ИГРАТЬ</button>
             <button onClick={handlePass} disabled={!isMyTurn||!gs.tableCombo} style={gbtn(false,{flex:1,color:isMyTurn&&gs.tableCombo?GOLD:GOLD_DIM,border:`1px solid ${isMyTurn&&gs.tableCombo?GOLD_DIM:'rgba(255,255,255,0.05)'}`,cursor:isMyTurn&&gs.tableCombo?'pointer':'not-allowed'} as any)}>ПАС</button>
-            <button onClick={()=>setChatOpen(o=>!o)} style={{ padding:'10px 12px', borderRadius:12, border:`1px solid ${chatOpen?GOLD:'rgba(201,168,76,0.2)'}`, background:chatOpen?`rgba(201,168,76,0.15)`:'rgba(255,255,255,0.03)', color:chatOpen?GOLD:'rgba(201,168,76,0.5)', cursor:'pointer', fontSize:16, position:'relative' }}>
+            <button onClick={()=>{ setChatOpen(o=>!o); setUnreadCount(0); prevMsgCount.current = messages.length }} style={{ padding:'10px 12px', borderRadius:12, border:`1px solid ${chatOpen?GOLD:'rgba(201,168,76,0.2)'}`, background:chatOpen?`rgba(201,168,76,0.15)`:'rgba(255,255,255,0.03)', color:chatOpen?GOLD:'rgba(201,168,76,0.5)', cursor:'pointer', fontSize:16, position:'relative' }}>
               💬
-              {messages.length>0 && !chatOpen && <div style={{ position:'absolute', top:4, right:4, width:6, height:6, borderRadius:'50%', background:GOLD }}/>}
+              {unreadCount>0 && !chatOpen && (
+                <div style={{ position:'absolute', top:-6, right:-6, minWidth:18, height:18, borderRadius:9, background:'#e74c3c', color:'white', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 4px', border:'2px solid #0a0800' }}>
+                  {unreadCount>9?'9+':unreadCount}
+                </div>
+              )}
             </button>
           </>}
         </div>
