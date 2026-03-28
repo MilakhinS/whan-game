@@ -373,12 +373,16 @@ export default function GamePage() {
   // ── AI ── (only host controls bots)
   useEffect(()=>{
     if (!gs || gs.phase!=='playing') return
-    if (gs.currentPlayer===mySeat) return
+    if (gs.currentPlayer===mySeat && !isSpectator) return
     if (animRef.current) return
 
-    // Only act if current player is a bot
+    // Act if current player is a bot OR a spectator (waiting for next round)
     const botSeats: number[] = gs.botSeats || []
-    if (!botSeats.includes(gs.currentPlayer)) return
+    const spectatorSeats: number[] = (gs.spectators||[])
+      .filter((s:any)=>s.joinRound===gs.round)
+      .map((s:any)=>s.seat)
+    const shouldAct = botSeats.includes(gs.currentPlayer) || spectatorSeats.includes(gs.currentPlayer)
+    if (!shouldAct) return
 
     // Only the host (seat 0) controls bots to avoid conflicts
     // If no bots, skip. If mySeat is not the lowest real player seat, skip.
@@ -478,7 +482,7 @@ export default function GamePage() {
   const isSpectator = spectatorInfo && spectatorInfo.joinRound === gs.round
 
   const myHand   = sortHand(gs.hands[mySeat]||[])
-  const isMyTurn = gs.currentPlayer===mySeat && gs.phase==='playing' && !isSpectator
+  const isMyTurn = gs.currentPlayer===mySeat && gs.phase==='playing' && !isSpectator && mySeat>=0
   const myDone   = gs.eliminated.includes(mySeat)
   const selCards: Card[] = myHand.filter((c:Card)=>selected.includes(c.id))
   const selCombo = selCards.length ? detectCombo(selCards) : null
