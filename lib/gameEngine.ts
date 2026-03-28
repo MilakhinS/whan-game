@@ -72,7 +72,7 @@ export function detectCombo(cards: Card[]): Combo | null {
     return null
   }
   if (n === 4) {
-    const u = [...new Set(real.map(c=>c.rank))]
+    const u = Array.from(new Set(real.map(c=>c.rank)))
     if (u.length <= 1 && real.length + wc === 4)
       return { type:'quad', power:cp(real[0] ?? {rank:'4',suit:'',id:''}), cards }
   }
