@@ -269,11 +269,22 @@ export default function GamePage() {
     }
   }, [roomId])
 
-  // ── AI ──
+  // ── AI ── (only host controls bots)
   useEffect(()=>{
     if (!gs || gs.phase!=='playing') return
     if (gs.currentPlayer===mySeat) return
     if (animRef.current) return
+
+    // Only act if current player is a bot
+    const botSeats: number[] = gs.botSeats || []
+    if (!botSeats.includes(gs.currentPlayer)) return
+
+    // Only the host (seat 0) controls bots to avoid conflicts
+    // If no bots, skip. If mySeat is not the lowest real player seat, skip.
+    const realSeats = Array.from({length:gs.playerCount||gs.playerNames?.length||4},(_,i)=>i).filter((s:number)=>!botSeats.includes(s))
+    const hostSeat = realSeats.length > 0 ? Math.min(...realSeats) : 0
+    if (mySeat !== hostSeat) return
+
     const t = setTimeout(async()=>{
       if (animRef.current) return
       animRef.current=true
