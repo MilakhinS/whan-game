@@ -3,26 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, type Profile, type Room } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
-
-const GOLD = '#c9a84c'
-const GOLD_DIM = '#7a6020'
-const GOLD_GLOW = 'rgba(201,168,76,0.35)'
-const panel = (extra={}) => ({ background:'rgba(18,14,4,0.88)', border:'1px solid rgba(201,168,76,0.18)', borderRadius:20, backdropFilter:'blur(12px)', ...extra })
-const inp = { background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.22)', borderRadius:12, padding:'10px 14px', color:'#e8d5a3', fontSize:14, outline:'none', width:'100%', boxSizing:'border-box' as const }
-const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?GOLD:GOLD_DIM+'44'}`, background:active?'linear-gradient(135deg,#3d2a00,#6b4a0a,#3d2a00)':'rgba(255,255,255,0.03)', color:active?'#f0d080':'#5a4820', cursor:active?'pointer':'not-allowed', fontSize:14, fontWeight:600, boxShadow:active?`0 2px 16px ${GOLD_GLOW}`:'none', transition:'all 0.18s', ...extra })
-const badge = (color=GOLD) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, border:`1px solid ${color}44`, background:`${color}18`, color, fontSize:11, fontWeight:600 })
-
-function Smoke() {
-  return (
-    <div style={{ position:'fixed', inset:0, pointerEvents:'none', overflow:'hidden', zIndex:0 }}>
-      {[...Array(6)].map((_,i)=>(
-        <div key={i} style={{ position:'absolute', bottom:-60, left:`${10+i*15}%`, width:`${60+i*20}px`, height:`${60+i*20}px`, background:'radial-gradient(circle,rgba(201,168,76,0.055) 0%,transparent 70%)', borderRadius:'50%', animation:`smokeRise ${7+i*0.8}s ${i*1.4}s infinite ease-in` }}/>
-      ))}
-      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${GOLD},transparent)`, opacity:0.5 }}/>
-      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${GOLD},transparent)`, opacity:0.5 }}/>
-    </div>
-  )
-}
+import { THEMES, type ThemeName } from '@/lib/themes'
 
 export default function HomePage() {
   const router = useRouter()
@@ -39,9 +20,24 @@ export default function HomePage() {
   const [passError, setPassError]   = useState('')
   const [toast, setToast]           = useState('')
   const [loading, setLoading]       = useState(false)
-  const [activeTab, setActiveTab]   = useState<'rooms'|'create'|'leaders'>('rooms')
+  const [activeTab, setActiveTab]   = useState<'rooms'|'create'|'leaders'|'profile'>('rooms')
+  const [themeName, setThemeName]   = useState<ThemeName>('hookah')
+  const [editUsername, setEditUsername] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
+
+  const T = THEMES[themeName]
+
+  const panel = (extra={}) => ({ background:T.panel, border:`1px solid ${T.panelBorder}`, borderRadius:20, backdropFilter:'blur(12px)', ...extra } as any)
+  const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?T.gold:T.goldDim+'44'}`, background:active?`linear-gradient(135deg,${T.goldDim}88,${T.goldDim}cc,${T.goldDim}88)`:'rgba(255,255,255,0.03)', color:active?T.text:T.goldDim, cursor:active?'pointer':'not-allowed', fontSize:14, fontWeight:600, boxShadow:active?`0 2px 16px ${T.goldGlow}`:'none', transition:'all 0.18s', ...extra } as any)
+  const inp = { background:'rgba(255,255,255,0.04)', border:`1px solid ${T.goldDim}55`, borderRadius:12, padding:'10px 14px', color:T.text, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box' as const, fontFamily:'inherit' }
+  const badge = (color=T.gold) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, border:`1px solid ${color}44`, background:`${color}18`, color, fontSize:11, fontWeight:600 })
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
+
+  useEffect(()=>{
+    // Apply theme to body
+    document.body.style.background = T.bg
+  },[themeName])
 
   useEffect(()=>{
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -49,14 +45,18 @@ export default function HomePage() {
       const uid = session.user.id
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).single()
       if (!prof) {
-        const username = session.user.user_metadata?.full_name
-          || session.user.user_metadata?.name
-          || session.user.email?.split('@')[0]
-          || 'Player'
+        const username = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Player'
         await supabase.from('profiles').insert({ id: uid, username })
         loadProfile(uid)
       } else {
         setProfile(prof)
+        setEditUsername(prof.username)
+        if (prof.theme) setThemeName(prof.theme as ThemeName)
+        else {
+          // Load from localStorage as fallback
+          const saved = localStorage.getItem('whan-theme') as ThemeName
+          if (saved && THEMES[saved]) setThemeName(saved)
+        }
       }
     })
 
@@ -65,29 +65,25 @@ export default function HomePage() {
         const uid = session.user.id
         const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).single()
         if (!prof) {
-          const username = session.user.user_metadata?.full_name
-            || session.user.user_metadata?.name
-            || session.user.email?.split('@')[0]
-            || 'Player'
+          const username = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Player'
           await supabase.from('profiles').insert({ id: uid, username })
           loadProfile(uid)
         } else {
           setProfile(prof)
+          setEditUsername(prof.username)
+          if (prof.theme) setThemeName(prof.theme as ThemeName)
         }
-      } else if (event === 'SIGNED_OUT') {
-        router.push('/auth')
-      }
+      } else if (event === 'SIGNED_OUT') { router.push('/auth') }
     })
 
     loadRooms()
-    loadLeaders()
     const channel = supabase.channel('rooms').on('postgres_changes',{event:'*',schema:'public',table:'rooms'},()=>loadRooms()).subscribe()
     return () => { supabase.removeChannel(channel); subscription.unsubscribe() }
   },[])
 
   async function loadProfile(uid: string) {
     const { data } = await supabase.from('profiles').select('*').eq('id',uid).single()
-    if (data) setProfile(data)
+    if (data) { setProfile(data); setEditUsername(data.username); if(data.theme) setThemeName(data.theme as ThemeName) }
   }
 
   async function loadRooms() {
@@ -100,6 +96,23 @@ export default function HomePage() {
     if (data) setLeaders(data)
   }
 
+  async function saveProfile() {
+    if (!profile || !editUsername.trim()) return
+    if (editUsername.length < 3) { showToast('Никнейм минимум 3 символа'); return }
+    setSavingProfile(true)
+    await supabase.from('profiles').update({ username: editUsername.trim(), theme: themeName }).eq('id', profile.id)
+    localStorage.setItem('whan-theme', themeName)
+    await loadProfile(profile.id)
+    showToast('✓ Профиль сохранён!')
+    setSavingProfile(false)
+  }
+
+  async function applyTheme(t: ThemeName) {
+    setThemeName(t)
+    localStorage.setItem('whan-theme', t)
+    if (profile) await supabase.from('profiles').update({ theme: t }).eq('id', profile.id)
+  }
+
   async function createRoom() {
     if (!roomName.trim()) { showToast('Введите название'); return }
     setLoading(true)
@@ -107,27 +120,17 @@ export default function HomePage() {
     if (!user) { router.push('/auth'); return }
     const maxP = gameMode==='team'?4:6
     await supabase.from('rooms').delete().eq('host_id', user.id).eq('status','waiting').eq('player_count',0)
-    const { data, error } = await supabase.from('rooms').insert({
-      name: roomName.trim(),
-      password: roomPass.trim()||null,
-      mode: gameMode,
-      host_id: user.id,
-      player_count: 1,
-      max_players: maxP,
-      status: 'waiting'
-    }).select().single()
-    if (error) { showToast('Ошибка создания комнаты'); setLoading(false); return }
+    const { data, error } = await supabase.from('rooms').insert({ name:roomName.trim(), password:roomPass.trim()||null, mode:gameMode, host_id:user.id, player_count:1, max_players:maxP, status:'waiting' }).select().single()
+    if (error) { showToast('Ошибка'); setLoading(false); return }
     await supabase.from('room_players').insert({ room_id:data.id, player_id:user.id, seat:0, is_ready:false })
-    setRoomName('')
-    setRoomPass('')
-    setLoading(false)
+    setRoomName(''); setRoomPass(''); setLoading(false)
     router.push(`/room/${data.id}`)
   }
 
   async function joinRoom(room: Room) {
     if (room.player_count >= room.max_players) { showToast('Комната заполнена'); return }
     if (room.password) { setPendingRoom(room); setEnterPass(''); setPassError('') }
-    else doJoin(room, '')
+    else doJoin(room,'')
   }
 
   async function doJoin(room: Room, pass: string) {
@@ -143,23 +146,20 @@ export default function HomePage() {
     router.push(`/room/${room.id}`)
   }
 
-  async function signOut() {
-    await supabase.auth.signOut()
-    router.push('/auth')
-  }
+  async function signOut() { await supabase.auth.signOut(); router.push('/auth') }
 
-  const filtered = rooms.filter(r=>{
-    const m = modeFilter==='all'||r.mode===modeFilter
-    const s = r.name.toLowerCase().includes(search.toLowerCase())
-    return m&&s
-  })
-
-  const medalEmoji = (i: number) => i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '
+  const filtered = rooms.filter(r=>{ const m=modeFilter==='all'||r.mode===modeFilter; const s=r.name.toLowerCase().includes(search.toLowerCase()); return m&&s })
+  const medalEmoji = (i:number) => i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '
   const myRank = leaders.findIndex(l=>l.id===profile?.id)
 
   return (
-    <div style={{ minHeight:'100vh', maxWidth:600, margin:'0 auto', padding:'12px 12px 80px', position:'relative', color:'#e8d5a3', fontFamily:"Georgia,'Times New Roman',serif" }}>
-      <Smoke/>
+    <div style={{ minHeight:'100vh', maxWidth:600, margin:'0 auto', padding:'12px 12px 80px', position:'relative', color:T.text, fontFamily:"Georgia,'Times New Roman',serif" }}>
+
+      {/* Smoke */}
+      <div style={{ position:'fixed', inset:0, pointerEvents:'none', overflow:'hidden', zIndex:0 }}>
+        {[...Array(6)].map((_,i)=><div key={i} style={{ position:'absolute', bottom:-60, left:`${10+i*15}%`, width:`${60+i*20}px`, height:`${60+i*20}px`, background:`radial-gradient(circle,${T.smoke} 0%,transparent 70%)`, borderRadius:'50%', animation:`smokeRise ${7+i*0.8}s ${i*1.4}s infinite ease-in` }}/>)}
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${T.gold},transparent)`, opacity:0.5 }}/>
+      </div>
 
       {/* Password modal */}
       <AnimatePresence>
@@ -168,17 +168,14 @@ export default function HomePage() {
             style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
             onClick={e=>{ if(e.target===e.currentTarget) setPendingRoom(null) }}>
             <motion.div initial={{scale:0.85,y:20}} animate={{scale:1,y:0}}
-              style={{ ...panel(), padding:'24px 20px', width:'100%', maxWidth:360, border:`1px solid ${GOLD}44` }}>
-              <div style={{ fontSize:11, color:'rgba(201,168,76,0.45)', letterSpacing:2, marginBottom:6 }}>ВХОД В КОМНАТУ</div>
-              <div style={{ fontSize:17, fontWeight:700, color:GOLD, marginBottom:16 }}>{pendingRoom.name}</div>
-              <div style={{ fontSize:12, color:'rgba(201,168,76,0.5)', marginBottom:10 }}>🔒 Комната защищена паролем</div>
-              <input style={{...inp,marginBottom:8}} placeholder="Введите пароль" type="password" value={enterPass}
-                onChange={e=>{setEnterPass(e.target.value);setPassError('')}}
-                onKeyDown={e=>e.key==='Enter'&&doJoin(pendingRoom,enterPass)} autoFocus/>
+              style={{ ...panel(), padding:'24px 20px', width:'100%', maxWidth:360, border:`1px solid ${T.gold}44` }}>
+              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:6 }}>ВХОД В КОМНАТУ</div>
+              <div style={{ fontSize:17, fontWeight:700, color:T.gold, marginBottom:16 }}>{pendingRoom.name}</div>
+              <input style={{...inp,marginBottom:8}} placeholder="Введите пароль" type="password" value={enterPass} onChange={e=>{setEnterPass(e.target.value);setPassError('')}} onKeyDown={e=>e.key==='Enter'&&doJoin(pendingRoom,enterPass)} autoFocus/>
               {passError && <div style={{ fontSize:12, color:'#e74c3c', marginBottom:10 }}>{passError}</div>}
-              <div style={{ display:'flex', gap:8, marginTop:4 }}>
-                <button onClick={()=>setPendingRoom(null)} style={gbtn(false,{flex:1,color:GOLD_DIM,border:`1px solid ${GOLD_DIM}33`,cursor:'pointer'} as any)}>Отмена</button>
-                <button onClick={()=>doJoin(pendingRoom,enterPass)} style={gbtn(true,{flex:2} as any)}>Войти</button>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={()=>setPendingRoom(null)} style={gbtn(false,{flex:1,cursor:'pointer'})}>Отмена</button>
+                <button onClick={()=>doJoin(pendingRoom,enterPass)} style={gbtn(true,{flex:2})}>Войти</button>
               </div>
             </motion.div>
           </motion.div>
@@ -191,20 +188,20 @@ export default function HomePage() {
         <div style={{ ...panel(), padding:'12px 16px', marginBottom:14 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ fontSize:20, fontWeight:700, letterSpacing:5, background:`linear-gradient(180deg,#f5e070,${GOLD})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
-              <div style={{ fontSize:8, color:'rgba(201,168,76,0.3)', letterSpacing:1 }}>by Milakhin Studio</div>
+              <div style={{ fontSize:20, fontWeight:700, letterSpacing:5, background:`linear-gradient(180deg,#f5e070,${T.gold})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
+              <div style={{ fontSize:8, color:`${T.gold}55`, letterSpacing:1 }}>by Milakhin Studio</div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              {profile && <div style={{ fontSize:13, color:GOLD, fontWeight:600 }}>{profile.username}</div>}
-              <button onClick={signOut} style={{ background:'transparent', border:'1px solid rgba(201,168,76,0.2)', borderRadius:8, color:'rgba(201,168,76,0.5)', padding:'5px 10px', fontSize:11, cursor:'pointer' }}>Выйти</button>
+              {profile && <div style={{ fontSize:13, color:T.gold, fontWeight:600 }}>{profile.username}</div>}
+              <button onClick={signOut} style={{ background:'transparent', border:`1px solid ${T.goldDim}44`, borderRadius:8, color:`${T.gold}66`, padding:'5px 10px', fontSize:11, cursor:'pointer' }}>Выйти</button>
             </div>
           </div>
           {profile && (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
               {[['👑',profile.wins,'Победы'],['🔥',profile.streak,'Серия'],['💀',profile.losses,'Потери'],['⭐',profile.mmr,'MMR']].map(([icon,val,lbl])=>(
-                <div key={String(lbl)} style={{ ...panel({border:'1px solid rgba(201,168,76,0.1)'}), padding:'8px 4px', textAlign:'center' }}>
-                  <div style={{ fontSize:8, color:'rgba(201,168,76,0.4)' }}>{icon} {lbl}</div>
-                  <div style={{ fontSize:16, fontWeight:700, color:GOLD, marginTop:2 }}>{val}</div>
+                <div key={String(lbl)} style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'8px 4px', textAlign:'center' }}>
+                  <div style={{ fontSize:8, color:`${T.gold}66` }}>{icon} {lbl}</div>
+                  <div style={{ fontSize:16, fontWeight:700, color:T.gold, marginTop:2 }}>{val}</div>
                 </div>
               ))}
             </div>
@@ -214,37 +211,33 @@ export default function HomePage() {
         {/* ROOMS TAB */}
         {activeTab==='rooms' && (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            <input style={inp} placeholder="🔍  Поиск по названию…" value={search} onChange={e=>setSearch(e.target.value)}/>
+            <input style={inp} placeholder="🔍  Поиск…" value={search} onChange={e=>setSearch(e.target.value)}/>
             <div style={{ display:'flex', gap:6 }}>
               {([['all','Все'],['team','2×2'],['solo','Solo']] as const).map(([f,lbl])=>(
-                <button key={f} onClick={()=>setModeFilter(f)} style={{ flex:1, padding:'9px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, border:`1px solid ${modeFilter===f?GOLD:GOLD_DIM+'33'}`, background:modeFilter===f?'linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))':'rgba(255,255,255,0.02)', color:modeFilter===f?GOLD:'#5a4020', transition:'all 0.15s' }}>{lbl}</button>
+                <button key={f} onClick={()=>setModeFilter(f)} style={{ flex:1, padding:'9px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, border:`1px solid ${modeFilter===f?T.gold:T.goldDim+'33'}`, background:modeFilter===f?`${T.gold}22`:'rgba(255,255,255,0.02)', color:modeFilter===f?T.gold:T.goldDim, transition:'all 0.15s' }}>{lbl}</button>
               ))}
             </div>
             {filtered.length===0 ? (
-              <div style={{ textAlign:'center', color:'rgba(201,168,76,0.25)', fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
-                {rooms.length===0?'Пока нет комнат — создай первую! ➕':'Нет подходящих комнат'}
+              <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
+                {rooms.length===0?'Пока нет комнат — создай! ➕':'Нет комнат'}
               </div>
             ) : filtered.map(room=>(
               <motion.div key={room.id} whileHover={{scale:1.01}}
-                style={{ ...panel({border:'1px solid rgba(201,168,76,0.12)'}), padding:'14px 14px', display:'flex', alignItems:'center', gap:12 }}>
+                style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'14px', display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:'#e8d5a3', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
+                    <div style={{ fontSize:14, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
                     {room.password && <span>🔒</span>}
                   </div>
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
-                    <span style={badge(GOLD)}>{room.mode==='team'?'2×2':'Solo'}</span>
-                    <span style={badge('rgba(200,200,200,0.5)')}>{room.player_count}/{room.max_players} 👤</span>
-                    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                      <div style={{ width:40, height:3, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
-                        <div style={{ height:'100%', width:`${(room.player_count/room.max_players)*100}%`, background:GOLD, borderRadius:2 }}/>
-                      </div>
-                      <span style={{ fontSize:10, color:GOLD }}>{room.max_players-room.player_count} св.</span>
+                    <span style={badge(T.gold)}>{room.mode==='team'?'2×2':'Solo'}</span>
+                    <span style={badge(`${T.text}88`)}>{room.player_count}/{room.max_players} 👤</span>
+                    <div style={{ width:40, height:3, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
+                      <div style={{ height:'100%', width:`${(room.player_count/room.max_players)*100}%`, background:T.gold, borderRadius:2 }}/>
                     </div>
                   </div>
                 </div>
-                <button onClick={()=>joinRoom(room)} disabled={room.player_count>=room.max_players}
-                  style={gbtn(room.player_count<room.max_players,{padding:'10px 16px',fontSize:13,flexShrink:0} as any)}>
+                <button onClick={()=>joinRoom(room)} disabled={room.player_count>=room.max_players} style={gbtn(room.player_count<room.max_players,{padding:'10px 16px',fontSize:13,flexShrink:0})}>
                   {room.player_count>=room.max_players?'Полная':'Войти'}
                 </button>
               </motion.div>
@@ -256,30 +249,29 @@ export default function HomePage() {
         {activeTab==='create' && (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             <div style={{ ...panel(), padding:'20px 16px' }}>
-              <div style={{ fontSize:11, color:'rgba(201,168,76,0.5)', letterSpacing:2, marginBottom:14 }}>НОВАЯ КОМНАТА</div>
+              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:14 }}>НОВАЯ КОМНАТА</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 <input style={inp} placeholder="Название комнаты" value={roomName} onChange={e=>setRoomName(e.target.value)} autoComplete="off"/>
                 <input style={inp} placeholder="Пароль (необязательно)" type="password" value={roomPass} onChange={e=>setRoomPass(e.target.value)} autoComplete="new-password"/>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                   {([['team','2 × 2','4 игрока'],['solo','Сам за себя','до 6']] as const).map(([mode,title,sub])=>(
-                    <button key={mode} onClick={()=>setGameMode(mode)} style={{ padding:'14px 6px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border:`1.5px solid ${gameMode===mode?GOLD:GOLD_DIM+'33'}`, background:gameMode===mode?'linear-gradient(135deg,rgba(201,168,76,0.14),rgba(201,168,76,0.04))':'rgba(255,255,255,0.02)', color:gameMode===mode?GOLD:'#5a4020', transition:'all 0.18s' }}>
+                    <button key={mode} onClick={()=>setGameMode(mode)} style={{ padding:'14px 6px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border:`1.5px solid ${gameMode===mode?T.gold:T.goldDim+'33'}`, background:gameMode===mode?`${T.gold}18`:'rgba(255,255,255,0.02)', color:gameMode===mode?T.gold:T.goldDim, transition:'all 0.18s' }}>
                       <div style={{fontSize:14,fontWeight:700}}>{title}</div>
                       <div style={{fontSize:10,opacity:0.6,marginTop:2}}>{sub}</div>
                     </button>
                   ))}
                 </div>
-                <button onClick={()=>{ createRoom(); setActiveTab('rooms') }} disabled={loading} style={gbtn(!loading,{padding:'14px',fontSize:15} as any)}>
+                <button onClick={()=>{ createRoom(); setActiveTab('rooms') }} disabled={loading} style={gbtn(!loading,{padding:'14px',fontSize:15})}>
                   {loading?'Создаём…':'🎴 Создать комнату'}
                 </button>
               </div>
             </div>
             <div style={{ ...panel(), padding:'16px' }}>
-              <div style={{ fontSize:11, color:'rgba(201,168,76,0.45)', letterSpacing:2, marginBottom:10 }}>ПРАВИЛА</div>
-              <div style={{ fontSize:12, color:'rgba(201,168,76,0.55)', lineHeight:2 }}>
+              <div style={{ fontSize:11, color:`${T.gold}66`, letterSpacing:2, marginBottom:10 }}>ПРАВИЛА</div>
+              <div style={{ fontSize:12, color:`${T.gold}88`, lineHeight:2 }}>
                 Сила: 4–A · 2 · 3 · 🃏Чёрный · 🃏Красный<br/>
                 Тройка бьёт одиночку / пару / стрит / ашлян<br/>
-                Каре бьёт всё<br/>
-                Ашлян — 3+ пары подряд (5-5/6-6/7-7)<br/>
+                Каре бьёт всё · Ашлян — 3+ пары подряд<br/>
                 ✦ Wild — заменяет любую карту<br/>
                 4♠ последней на 1 соперника = +2 очка
               </div>
@@ -290,99 +282,140 @@ export default function HomePage() {
         {/* LEADERS TAB */}
         {activeTab==='leaders' && (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-
-            {/* My rank */}
             {profile && myRank >= 0 && (
-              <div style={{ ...panel({border:`1px solid ${GOLD}44`}), padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ ...panel({border:`1px solid ${T.gold}44`}), padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ fontSize:22, width:36, textAlign:'center' }}>{myRank<3?medalEmoji(myRank):`#${myRank+1}`}</div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:GOLD }}>{profile.username} <span style={{ fontSize:11, color:'rgba(201,168,76,0.5)' }}>(вы)</span></div>
-                  <div style={{ fontSize:11, color:'rgba(201,168,76,0.5)', marginTop:2 }}>
-                    {profile.wins} побед · {profile.streak} серия
-                  </div>
+                  <div style={{ fontSize:14, fontWeight:700, color:T.gold }}>{profile.username} <span style={{ fontSize:11, color:`${T.gold}66` }}>(вы)</span></div>
+                  <div style={{ fontSize:11, color:`${T.gold}66`, marginTop:2 }}>{profile.wins} побед · {profile.streak} серия</div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:20, fontWeight:700, color:GOLD }}>{profile.mmr}</div>
-                  <div style={{ fontSize:10, color:'rgba(201,168,76,0.4)' }}>MMR</div>
+                  <div style={{ fontSize:20, fontWeight:700, color:T.gold }}>{profile.mmr}</div>
+                  <div style={{ fontSize:10, color:`${T.gold}44` }}>MMR</div>
                 </div>
               </div>
             )}
-
-            <div style={{ height:1, background:`linear-gradient(90deg,transparent,${GOLD_DIM},transparent)` }}/>
-
-            {/* Top 3 podium */}
+            <div style={{ height:1, background:`linear-gradient(90deg,transparent,${T.goldDim},transparent)` }}/>
             {leaders.length >= 3 && (
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1.2fr 1fr', gap:8, marginBottom:4 }}>
-                {/* 2nd */}
-                <div style={{ ...panel({border:'1px solid rgba(201,168,76,0.15)'}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
+                <div style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
                   <div style={{ fontSize:24 }}>🥈</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:'#e8d5a3', marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[1]?.username}</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:T.text, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[1]?.username}</div>
                   <div style={{ fontSize:16, fontWeight:700, color:'#c0c0c0', marginTop:4 }}>{leaders[1]?.mmr}</div>
                 </div>
-                {/* 1st */}
-                <div style={{ ...panel({border:`1px solid ${GOLD}55`, background:'rgba(201,168,76,0.08)'}), padding:'20px 8px', textAlign:'center' }}>
+                <div style={{ ...panel({border:`1px solid ${T.gold}55`, background:`${T.gold}11`}), padding:'20px 8px', textAlign:'center' }}>
                   <div style={{ fontSize:30 }}>🥇</div>
-                  <div style={{ fontSize:13, fontWeight:700, color:GOLD, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[0]?.username}</div>
-                  <div style={{ fontSize:20, fontWeight:700, color:GOLD, marginTop:4 }}>{leaders[0]?.mmr}</div>
-                  <div style={{ fontSize:9, color:'rgba(201,168,76,0.5)', marginTop:2 }}>MMR</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:T.gold, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[0]?.username}</div>
+                  <div style={{ fontSize:20, fontWeight:700, color:T.gold, marginTop:4 }}>{leaders[0]?.mmr}</div>
                 </div>
-                {/* 3rd */}
-                <div style={{ ...panel({border:'1px solid rgba(201,168,76,0.15)'}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
+                <div style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
                   <div style={{ fontSize:24 }}>🥉</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:'#e8d5a3', marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[2]?.username}</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:T.text, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[2]?.username}</div>
                   <div style={{ fontSize:16, fontWeight:700, color:'#cd7f32', marginTop:4 }}>{leaders[2]?.mmr}</div>
                 </div>
               </div>
             )}
-
-            {/* Full list */}
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              {leaders.map((player, i) => {
-                const isMe = player.id === profile?.id
+              {leaders.map((player,i)=>{
+                const isMe = player.id===profile?.id
                 return (
                   <motion.div key={player.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.03}}
-                    style={{ ...panel({border:`1px solid ${isMe?GOLD+'44':'rgba(201,168,76,0.08)'}`}), padding:'10px 14px', display:'flex', alignItems:'center', gap:12, background:isMe?'rgba(201,168,76,0.06)':undefined }}>
-                    <div style={{ fontSize:i<3?20:13, width:32, textAlign:'center', color:i<3?undefined:'rgba(201,168,76,0.4)', fontWeight:600 }}>
-                      {i<3 ? medalEmoji(i) : `#${i+1}`}
-                    </div>
+                    style={{ ...panel({border:`1px solid ${isMe?T.gold+'44':T.goldDim+'22'}`}), padding:'10px 14px', display:'flex', alignItems:'center', gap:12, background:isMe?`${T.gold}08`:undefined }}>
+                    <div style={{ fontSize:i<3?20:13, width:32, textAlign:'center', color:i<3?undefined:`${T.gold}55`, fontWeight:600 }}>{i<3?medalEmoji(i):`#${i+1}`}</div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:isMe?700:500, color:isMe?GOLD:'#e8d5a3', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      <div style={{ fontSize:13, fontWeight:isMe?700:500, color:isMe?T.gold:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {player.username}{isMe?' 👈':''}
                       </div>
-                      <div style={{ fontSize:10, color:'rgba(201,168,76,0.4)', marginTop:1 }}>
-                        {player.wins}W · {player.losses}L · {player.streak}🔥
-                      </div>
+                      <div style={{ fontSize:10, color:`${T.gold}55`, marginTop:1 }}>{player.wins}W · {player.losses}L · {player.streak}🔥</div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>
-                      <div style={{ fontSize:16, fontWeight:700, color:i===0?GOLD:i===1?'#c0c0c0':i===2?'#cd7f32':'#e8d5a3' }}>{player.mmr}</div>
-                      <div style={{ fontSize:9, color:'rgba(201,168,76,0.3)' }}>MMR</div>
+                      <div style={{ fontSize:16, fontWeight:700, color:i===0?T.gold:i===1?'#c0c0c0':i===2?'#cd7f32':T.text }}>{player.mmr}</div>
+                      <div style={{ fontSize:9, color:`${T.gold}44` }}>MMR</div>
                     </div>
                   </motion.div>
                 )
               })}
+              {leaders.length===0 && <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:13, padding:'60px 0', fontStyle:'italic' }}>Сыграй первым! 🎴</div>}
+            </div>
+          </div>
+        )}
+
+        {/* PROFILE TAB */}
+        {activeTab==='profile' && profile && (
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+
+            {/* Avatar + name */}
+            <div style={{ ...panel(), padding:'20px 16px', textAlign:'center' }}>
+              <div style={{ width:72, height:72, borderRadius:'50%', background:`linear-gradient(135deg,${T.goldDim},${T.gold})`, margin:'0 auto 12px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:700, color:'#000', boxShadow:`0 0 24px ${T.goldGlow}` }}>
+                {profile.username[0]?.toUpperCase()}
+              </div>
+              <div style={{ fontSize:18, fontWeight:700, color:T.gold }}>{profile.username}</div>
+              <div style={{ fontSize:11, color:`${T.gold}55`, marginTop:4 }}>MMR {profile.mmr}</div>
             </div>
 
-            {leaders.length === 0 && (
-              <div style={{ textAlign:'center', color:'rgba(201,168,76,0.25)', fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
-                Пока никого нет — сыграй первым! 🎴
+            {/* Edit username */}
+            <div style={{ ...panel(), padding:'18px 16px' }}>
+              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:12 }}>ИЗМЕНИТЬ НИКНЕЙМ</div>
+              <input style={inp} placeholder="Новый никнейм" value={editUsername} onChange={e=>setEditUsername(e.target.value)} maxLength={20}/>
+              <div style={{ fontSize:10, color:`${T.gold}44`, marginTop:6 }}>{editUsername.length}/20 символов</div>
+            </div>
+
+            {/* Theme selector */}
+            <div style={{ ...panel(), padding:'18px 16px' }}>
+              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:14 }}>ТЕМА ОФОРМЛЕНИЯ</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                {(Object.entries(THEMES) as [ThemeName, typeof THEMES[ThemeName]][]).map(([key, theme])=>(
+                  <button key={key} onClick={()=>applyTheme(key)}
+                    style={{ padding:'14px 16px', borderRadius:14, cursor:'pointer', fontFamily:'inherit', textAlign:'left', border:`2px solid ${themeName===key?theme.gold:theme.goldDim+'33'}`, background:themeName===key?`${theme.gold}18`:'rgba(255,255,255,0.02)', transition:'all 0.2s', display:'flex', alignItems:'center', gap:14 }}>
+                    {/* Color preview */}
+                    <div style={{ width:36, height:36, borderRadius:10, background:theme.bg, border:`1px solid ${theme.gold}66`, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>
+                      {theme.emoji}
+                    </div>
+                    <div>
+                      <div style={{ fontSize:14, fontWeight:600, color:theme.gold }}>{theme.name}</div>
+                      <div style={{ fontSize:11, color:`${theme.gold}66`, marginTop:2 }}>
+                        {key==='hookah'?'Тёмный · Золотой':key==='midnight'?'Тёмный · Фиолетовый':'Тёмный · Нефритовый'}
+                      </div>
+                    </div>
+                    {themeName===key && <div style={{ marginLeft:'auto', fontSize:16, color:theme.gold }}>✓</div>}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+
+            {/* Save button */}
+            <button onClick={saveProfile} disabled={savingProfile} style={gbtn(!savingProfile,{padding:'14px',fontSize:15,width:'100%'})}>
+              {savingProfile?'Сохраняем…':'💾 Сохранить'}
+            </button>
+
+            {/* Stats */}
+            <div style={{ ...panel(), padding:'16px' }}>
+              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:12 }}>СТАТИСТИКА</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {[['🏆 Победы',profile.wins],['💀 Поражения',profile.losses],['🔥 Серия',profile.streak],['⭐ MMR',profile.mmr]].map(([lbl,val])=>(
+                  <div key={String(lbl)} style={{ background:'rgba(255,255,255,0.02)', border:`1px solid ${T.goldDim}33`, borderRadius:12, padding:'12px', textAlign:'center' }}>
+                    <div style={{ fontSize:12, color:`${T.gold}66` }}>{lbl}</div>
+                    <div style={{ fontSize:22, fontWeight:700, color:T.gold, marginTop:4 }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Bottom nav */}
-      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:600, background:'rgba(8,4,1,0.95)', borderTop:`1px solid rgba(201,168,76,0.15)`, backdropFilter:'blur(12px)', zIndex:50, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', padding:'8px 12px 12px', gap:8 }}>
-        {([['rooms','🎮','Комнаты'],['create','➕','Создать'],['leaders','🏆','Рейтинг']] as const).map(([tab,icon,lbl])=>(
-          <button key={tab} onClick={()=>{ setActiveTab(tab); if(tab==='leaders') loadLeaders() }} style={{ padding:'10px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', border:'none', background:activeTab===tab?'linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))':'transparent', color:activeTab===tab?GOLD:'rgba(201,168,76,0.35)', transition:'all 0.18s', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:600, background:`${T.bgSolid}f5`, borderTop:`1px solid ${T.goldDim}33`, backdropFilter:'blur(12px)', zIndex:50, display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', padding:'8px 12px 12px', gap:6 }}>
+        {([['rooms','🎮','Комнаты'],['create','➕','Создать'],['leaders','🏆','Рейтинг'],['profile','👤','Профиль']] as const).map(([tab,icon,lbl])=>(
+          <button key={tab} onClick={()=>{ setActiveTab(tab); if(tab==='leaders') loadLeaders() }} style={{ padding:'8px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', border:'none', background:activeTab===tab?`${T.gold}22`:'transparent', color:activeTab===tab?T.gold:`${T.gold}44`, transition:'all 0.18s', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
             <span style={{ fontSize:18 }}>{icon}</span>
-            <span style={{ fontSize:10, fontWeight:activeTab===tab?700:400 }}>{lbl}</span>
+            <span style={{ fontSize:9, fontWeight:activeTab===tab?700:400 }}>{lbl}</span>
           </button>
         ))}
       </div>
 
       {toast && (
-        <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#2d1a00,#6b4f0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, boxShadow:`0 0 24px ${GOLD_GLOW}`, whiteSpace:'nowrap' }}>
+        <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg,${T.goldDim}cc,${T.goldDim})`, color:T.text, borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${T.gold}`, boxShadow:`0 0 24px ${T.goldGlow}`, whiteSpace:'nowrap' }}>
           {toast}
         </div>
       )}
