@@ -224,27 +224,29 @@ export default function GamePage() {
       newGs.log=[`🏆 ${mode==='team'&&pc===4?`Команда ${winnerResult===0?'A':'B'} победила`:'Победитель!'} ${pts>1?'• 4♠ бонус!':''}`, ...newGs.log].slice(0,30)
 
       // Update MMR for the real player
-      if (myId) {
+      const { data: { user } } = await supabase.auth.getUser()
+      const uid = user?.id || myId
+      if (uid) {
         let mmrDelta = 0
         if (mode==='team' && pc===4) {
           const myTeam = TEAMS.findIndex((t:number[])=>t.includes(mySeat))
           const isWin = winnerResult === myTeam
           mmrDelta = isWin ? (pts>1?20:10) : -5
         } else {
-          // Solo: first eliminated = winner +10, last remaining = -10, middle = +5
-          const isWinner = newElim.length > 0 && newElim[0] === mySeat
-          const isLoser  = !newElim.includes(mySeat) // still has cards = last one standing
-          mmrDelta = isWinner ? 10 : isLoser ? -10 : 5
+          const elimOrder = newElim.indexOf(mySeat)
+          if (elimOrder === 0) mmrDelta = 10        // первый вышел = победитель +10
+          else if (elimOrder === -1) mmrDelta = -10  // последний = проигравший -10
+          else mmrDelta = 5                           // середина +5
         }
-        supabase.from('profiles').select('mmr,wins,losses,streak').eq('id',myId).single().then(({data})=>{
-          if (!data) return
-          supabase.from('profiles').update({
-            mmr: Math.max(0, (data.mmr||1000) + mmrDelta),
-            wins: mmrDelta > 0 ? (data.wins||0)+1 : data.wins,
-            losses: mmrDelta < 0 ? (data.losses||0)+1 : data.losses,
-            streak: mmrDelta > 0 ? (data.streak||0)+1 : 0,
-          }).eq('id',myId)
-        })
+        const { data: prof } = await supabase.from('profiles').select('mmr,wins,losses,streak').eq('id',uid).single()
+        if (prof) {
+          await supabase.from('profiles').update({
+            mmr: Math.max(0, (prof.mmr||1000) + mmrDelta),
+            wins: mmrDelta > 0 ? (prof.wins||0)+1 : prof.wins,
+            losses: mmrDelta < 0 ? (prof.losses||0)+1 : prof.losses,
+            streak: mmrDelta > 0 ? (prof.streak||0)+1 : 0,
+          }).eq('id',uid)
+        }
       }
     }
     await pushState(newGs)
@@ -482,10 +484,10 @@ export default function GamePage() {
             <motion.div
               initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}}
               transition={{type:'spring',damping:28,stiffness:260}}
-              style={{ position:'fixed', bottom:0, left:0, right:0, height:'32vh', background:'rgba(8,4,1,0.97)', borderTop:`1px solid rgba(201,168,76,0.25)`, borderRadius:'16px 16px 0 0', zIndex:60, display:'flex', flexDirection:'column', backdropFilter:'blur(20px)' }}>
+              style={{ position:'fixed', bottom:0, left:0, right:0, height:'40vh', background:'rgba(8,4,1,0.97)', borderTop:`1px solid rgba(201,168,76,0.25)`, borderRadius:'16px 16px 0 0', zIndex:60, display:'flex', flexDirection:'column', backdropFilter:'blur(20px)' }}>
               {/* Handle + header */}
-              <div style={{ padding:'8px 14px 6px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(201,168,76,0.08)', flexShrink:0 }}>
-                <div style={{ width:36, height:4, background:'rgba(201,168,76,0.2)', borderRadius:2, margin:'0 auto', position:'absolute', left:'50%', transform:'translateX(-50%)', top:8 }}/>
+              <div style={{ padding:'8px 14px 6px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(201,168,76,0.08)', flexShrink:0, position:'relative' }}>
+                <div style={{ width:36, height:4, background:'rgba(201,168,76,0.2)', borderRadius:2, position:'absolute', left:'50%', transform:'translateX(-50%)', top:8 }}/>
                 <div style={{ fontSize:12, fontWeight:600, color:GOLD, marginTop:4 }}>💬 Чат</div>
                 <button onClick={()=>setChatOpen(false)} style={{ background:'transparent', border:'none', color:'rgba(201,168,76,0.5)', fontSize:20, cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
               </div>
@@ -508,16 +510,21 @@ export default function GamePage() {
                 })}
               </div>
               {/* Input */}
-              <div style={{ padding:'8px 10px 14px', borderTop:'1px solid rgba(201,168,76,0.08)', display:'flex', gap:8, flexShrink:0 }}>
+              <div style={{ padding:'8px 10px 16px', borderTop:'1px solid rgba(201,168,76,0.08)', display:'flex', gap:8, flexShrink:0, background:'rgba(8,4,1,0.97)', paddingBottom:'max(16px, env(safe-area-inset-bottom))' }}>
                 <input
-                  style={{ flex:1, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:22, padding:'9px 14px', color:'#e8d5a3', fontSize:13, outline:'none', fontFamily:'inherit' }}
+                  style={{ flex:1, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:22, padding:'10px 16px', color:'#e8d5a3', fontSize:16, outline:'none', fontFamily:'inherit' }}
                   placeholder="Сообщение…" value={msgInput}
                   onChange={e=>setMsgInput(e.target.value)}
                   onKeyDown={e=>e.key==='Enter'&&sendMessage()}
+                  onFocus={()=>{
+                    // Scroll to bottom of messages when keyboard opens
+                    setTimeout(()=>{ if(chatRef.current) chatRef.current.scrollTop=chatRef.current.scrollHeight }, 400)
+                  }}
                   maxLength={200}
+                  enterKeyHint="send"
                 />
                 <button onClick={sendMessage} disabled={!msgInput.trim()}
-                  style={{ width:40, height:40, borderRadius:'50%', cursor:msgInput.trim()?'pointer':'default', border:`1px solid ${GOLD}44`, background:msgInput.trim()?`linear-gradient(135deg,#3d2a00,#6b4a0a)`:'transparent', color:msgInput.trim()?GOLD:'rgba(201,168,76,0.3)', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>➤</button>
+                  style={{ width:44, height:44, borderRadius:'50%', cursor:msgInput.trim()?'pointer':'default', border:`1px solid ${GOLD}44`, background:msgInput.trim()?`linear-gradient(135deg,#3d2a00,#6b4a0a)`:'transparent', color:msgInput.trim()?GOLD:'rgba(201,168,76,0.3)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>➤</button>
               </div>
             </motion.div>
           )}
