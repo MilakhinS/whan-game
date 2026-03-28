@@ -181,6 +181,8 @@ export default function HomePage() {
       showToast('Нет свободных мест')
     }
   }
+
+  async function joinRoom(room: Room) {
     if (room.player_count >= room.max_players) { showToast('Комната заполнена'); return }
     if (room.password) { setPendingRoom(room); setEnterPass(''); setPassError('') }
     else doJoin(room,'')
