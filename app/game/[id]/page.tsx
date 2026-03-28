@@ -16,7 +16,7 @@ const panel = (extra={}) => ({ background:'rgba(18,14,4,0.88)', border:'1px soli
 const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?GOLD:GOLD_DIM+'44'}`, background:active?'linear-gradient(135deg,#3d2a00,#6b4a0a,#3d2a00)':'rgba(255,255,255,0.03)', color:active?'#f0d080':'#5a4820', cursor:active?'pointer':'not-allowed', fontSize:14, fontWeight:600, boxShadow:active?`0 2px 16px ${GOLD_GLOW}`:'none', transition:'all 0.18s', ...extra })
 
 // ── Card components ──────────────────────────────────────────
-function CardFace({ card, selected, onClick, dim, small }: { card:Card; selected?:boolean; onClick?:()=>void; dim?:boolean; small?:boolean }) {
+function CardFace({ card, selected, onClick, dim, small, tableCard }: { card:Card; selected?:boolean; onClick?:()=>void; dim?:boolean; small?:boolean; tableCard?:boolean }) {
   const gold4s = is4S(card), wild = isW(card), rj = isRJ(card), bj = isBJ(card), jk = isJk(card), red = isRed(card)
   const w = small?34:52, h = small?50:76
 
@@ -29,15 +29,20 @@ function CardFace({ card, selected, onClick, dim, small }: { card:Card; selected
 
   const border = gold4s?'#ffd700': rj?'#ff4444': bj?'#888': selected?GOLD: wild?'#8b6914':'rgba(140,110,70,0.5)'
   const txt = gold4s?'#3d2000': rj?'#ffaaaa': bj?'#cccccc': wild?GOLD: red?'#8b1a1a':'#1a1209'
-
   const shadow = gold4s ? '0 0 18px rgba(255,215,0,0.6),0 4px 12px rgba(0,0,0,0.5)'
     : rj ? '0 0 14px rgba(255,50,50,0.5),0 4px 10px rgba(0,0,0,0.5)'
     : bj ? '0 0 10px rgba(255,255,255,0.1),0 4px 10px rgba(0,0,0,0.6)'
-    : selected ? `0 0 14px ${GOLD_GLOW},0 4px 10px rgba(0,0,0,0.4)` : '0 2px 8px rgba(0,0,0,0.35)'
+    : selected ? `0 0 20px ${GOLD_GLOW},0 6px 14px rgba(0,0,0,0.5)` : '0 2px 8px rgba(0,0,0,0.35)'
 
   return (
-    <motion.div onClick={onClick} whileHover={onClick?{y:-8,scale:1.03}:{}}
-      style={{ width:w, height:h, background:bg, border:`${selected||gold4s?'2':'1.5'}px solid ${border}`, borderRadius:8, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:onClick?'pointer':'default', flexShrink:0, opacity:dim?0.35:1, boxShadow:shadow, transform:selected?'translateY(-12px)':'none', transition:'transform 0.14s,box-shadow 0.14s', userSelect:'none', position:'relative', overflow:'hidden' }}>
+    <motion.div
+      onClick={onClick}
+      initial={tableCard ? { y:-30, opacity:0, scale:0.8, rotate: Math.random()*10-5 } : false}
+      animate={tableCard ? { y:0, opacity:1, scale:1, rotate:0 } : {}}
+      transition={tableCard ? { type:'spring', damping:14, stiffness:200 } : {}}
+      whileHover={onClick ? { y:-10, scale:1.06, boxShadow:`0 0 22px ${GOLD_GLOW}` } : {}}
+      whileTap={onClick ? { scale:0.96 } : {}}
+      style={{ width:w, height:h, background:bg, border:`${selected||gold4s?'2':'1.5'}px solid ${border}`, borderRadius:8, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:onClick?'pointer':'default', flexShrink:0, opacity:dim?0.35:1, boxShadow:selected?`0 0 20px ${GOLD_GLOW},0 6px 14px rgba(0,0,0,0.5)`:shadow, transform:selected?'translateY(-14px)':'none', transition:'transform 0.16s,box-shadow 0.16s', userSelect:'none', position:'relative', overflow:'hidden' }}>
       <div style={{ position:'absolute', top:3, left:4, fontSize:small?7:10, fontWeight:700, color:txt, lineHeight:1 }}>
         {wild?'W': rj?'RED': bj?'BLK': card.rank}
       </div>
@@ -51,6 +56,7 @@ function CardFace({ card, selected, onClick, dim, small }: { card:Card; selected
         {wild?'W': rj?'RED': bj?'BLK': card.rank}
       </div>
       {gold4s && <div style={{ position:'absolute', inset:0, background:'linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.25) 50%,transparent 70%)', animation:'shimmer 2.5s infinite' }}/>}
+      {selected && <div style={{ position:'absolute', inset:0, background:'linear-gradient(120deg,transparent 20%,rgba(201,168,76,0.12) 50%,transparent 80%)', animation:'shimmer 1.8s infinite' }}/>}
     </motion.div>
   )
 }
@@ -58,6 +64,33 @@ function CardFace({ card, selected, onClick, dim, small }: { card:Card; selected
 function CardBack({ small }: { small?: boolean }) {
   const w=small?28:52, h=small?40:76
   return <div style={{ width:w, height:h, flexShrink:0, background:'linear-gradient(145deg,#120c02,#1e1508,#120c02)', border:'1.5px solid rgba(201,168,76,0.2)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ fontSize:9, color:'rgba(201,168,76,0.25)' }}>✦</div></div>
+}
+
+// ── Win effect with gold particles ───────────────────────────
+function WinEffect({ show, winner }: { show: boolean; winner: any }) {
+  if (!show) return null
+  const particles = Array.from({length:24},(_,i)=>i)
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+          style={{ position:'fixed', inset:0, zIndex:150, pointerEvents:'none', overflow:'hidden' }}>
+          {/* Gold particles */}
+          {particles.map(i=>(
+            <motion.div key={i}
+              initial={{ x:`${Math.random()*100}vw`, y:'110vh', opacity:1, scale:Math.random()*0.6+0.4 }}
+              animate={{ y:`-${Math.random()*60+20}vh`, x:`${Math.random()*100}vw`, opacity:0, rotate:Math.random()*720 }}
+              transition={{ duration:Math.random()*1.5+1, delay:Math.random()*0.8, ease:'easeOut' }}
+              style={{ position:'absolute', width:i%3===0?12:i%3===1?8:6, height:i%3===0?12:i%3===1?8:6, borderRadius:i%2===0?'50%':2, background:i%4===0?GOLD:i%4===1?'#f5e070':i%4===2?'#ffffff':'rgba(201,168,76,0.6)' }}
+            />
+          ))}
+          {/* Center glow */}
+          <motion.div initial={{scale:0,opacity:0}} animate={{scale:[0,1.5,1],opacity:[0,0.6,0]}} transition={{duration:0.8}}
+            style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:300, height:300, borderRadius:'50%', background:`radial-gradient(circle,${GOLD_GLOW} 0%,transparent 70%)` }}/>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
 }
 
 function Smoke() {
@@ -300,6 +333,8 @@ export default function GamePage() {
 
   if (!gs) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:GOLD, fontSize:18 }}>Загрузка игры…</div>
 
+  const showWin = gs.phase==='roundEnd'
+
   const myHand   = sortHand(gs.hands[mySeat]||[])
   const isMyTurn = gs.currentPlayer===mySeat && gs.phase==='playing'
   const myDone   = gs.eliminated.includes(mySeat)
@@ -319,6 +354,7 @@ export default function GamePage() {
     <div style={{ minHeight:'100vh', padding:'10px 8px 28px', color:'#e8d5a3', fontFamily:"Georgia,serif", position:'relative', overflow:'hidden' }}>
       <Smoke/>
       <FourSpadeEffect show={show4S}/>
+      <WinEffect show={showWin} winner={gs.winner}/>
       <div style={{ position:'fixed', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${GOLD},transparent)`, zIndex:10 }}/>
 
       {toast && <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#2d1a00,#6b4f0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, boxShadow:`0 0 24px ${GOLD_GLOW}`, whiteSpace:'nowrap' }}>{toast}</div>}
@@ -375,7 +411,7 @@ export default function GamePage() {
           {gs.tableCombo ? (
             <div style={{ textAlign:'center' }}>
               <div style={{ display:'flex', gap:4, justifyContent:'center', flexWrap:'wrap' }}>
-                {gs.tableCombo.cards.map((c:Card)=><CardFace key={c.id} card={c}/>)}
+                {gs.tableCombo.cards.map((c:Card, i:number)=><CardFace key={c.id} card={c} tableCard/>)}
               </div>
               <div style={{ fontSize:10, marginTop:5, color:'rgba(201,168,76,0.45)' }}>
                 {comboLabel(gs.tableCombo)}{gs.lastPlayer!==null?` · ${gs.playerNames[gs.lastPlayer]}`:''}
