@@ -118,8 +118,11 @@ export function detectCombo(cards: Card[]): Combo | null {
   }
 
   if (n >= 4) {
-    if (real.some(isJk)) return null
+    // Straight cannot contain 2, 3, jokers or wilds
+    if (real.some(c => isJk(c) || ['2','3'].includes(c.rank))) return null
     const powers = real.map(cp).sort((a,b)=>a-b)
+    // Max straight power is A (index 10), so powers must be <= 10
+    if (powers[powers.length-1] > POWER['A']) return null
     if (wc === 0) {
       let ok = true
       for (let i=1;i<powers.length;i++) if(powers[i]!==powers[i-1]+1){ok=false;break}
@@ -127,7 +130,8 @@ export function detectCombo(cards: Card[]): Combo | null {
     } else if (wc === 1) {
       let gaps = 0
       for (let i=1;i<powers.length;i++) gaps+=powers[i]-powers[i-1]-1
-      if (gaps <= 1) return { type:'straight', power:powers[powers.length-1]+gaps, length:n, cards }
+      if (gaps <= 1 && powers[powers.length-1]+gaps <= POWER['A'])
+        return { type:'straight', power:powers[powers.length-1]+gaps, length:n, cards }
     }
   }
   return null
