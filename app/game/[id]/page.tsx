@@ -238,7 +238,20 @@ export default function GamePage() {
     }
 
     const next = nextActive(seat, newElim, pc)
-    const newGs = { ...g, hands:newH, tableCombo:combo, lastPlayer:seat, currentPlayer:next, passCount:0, mustPlay4S:false, eliminated:newElim, nextRoundStarter:nextStarter, phase:winnerResult!==null?'roundEnd':'playing', winner:winnerResult, winPoints:pts, log:[`${g.playerNames[seat]} ▶ ${comboLabel(combo)}`,...(g.log||[])].slice(0,30) }
+    let newCrownPlayer = g.crownPlayer ?? null
+
+    // 4♠ coronation: last card against single opponent
+    if (played4S && newH[seat].length===0) {
+      const activeOpponents = Array.from({length:pc},(_,i)=>i)
+        .filter(i=>i!==seat && !newElim.includes(i))
+      if (activeOpponents.length === 1) {
+        newCrownPlayer = activeOpponents[0]
+        pts = 2
+        nextStarter = seat
+      }
+    }
+
+    const newGs = { ...g, hands:newH, tableCombo:combo, lastPlayer:seat, currentPlayer:next, passCount:0, mustPlay4S:false, eliminated:newElim, nextRoundStarter:nextStarter, phase:winnerResult!==null?'roundEnd':'playing', winner:winnerResult, winPoints:pts, crownPlayer:newCrownPlayer, log:[`${g.playerNames[seat]} ▶ ${comboLabel(combo)}`,...(g.log||[])].slice(0,30) }
 
     if (winnerResult!==null) {
       const newScores=[...g.scores]
@@ -357,6 +370,10 @@ export default function GamePage() {
     if (!gs) return
     const { createInitialGameState } = await import('@/lib/gameEngine')
     const newGs = createInitialGameState(gs.playerNames, gs.mode, gs.scores, gs.round+1)
+    // Preserve botSeats for AI to work
+    newGs.botSeats = gs.botSeats || []
+    // Preserve crown
+    newGs.crownPlayer = gs.crownPlayer ?? null
     if (gs.nextRoundStarter!==null) {
       newGs.currentPlayer=gs.nextRoundStarter
       newGs.roundStarter=gs.nextRoundStarter
