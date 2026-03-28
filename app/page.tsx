@@ -24,6 +24,7 @@ export default function HomePage() {
   const [themeName, setThemeName]   = useState<ThemeName>('hookah')
   const [editUsername, setEditUsername] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
+  const [activeGames, setActiveGames] = useState<Room[]>([])
 
   const T = THEMES[themeName]
 
@@ -88,8 +89,6 @@ export default function HomePage() {
     const { data } = await supabase.from('profiles').select('*').eq('id',uid).single()
     if (data) { setProfile(data); setEditUsername(data.username); if(data.theme) setThemeName(data.theme as ThemeName) }
   }
-
-  const [activeGames, setActiveGames] = useState<Room[]>([])
 
   async function loadRooms() {
     const { data } = await supabase.from('rooms').select('*').eq('status','waiting').order('created_at',{ascending:false}).limit(20)
