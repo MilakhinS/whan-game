@@ -181,7 +181,7 @@ export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: bo
 
 // ── Initial game state ───────────────────────────────────────
 export function createInitialGameState(playerNames: string[], mode: 'team'|'solo', scores=[0,0], round=1) {
-  const playerCount = mode==='team' ? 4 : 6
+  const playerCount = playerNames.length // Use exact count from names array
   const deck = shuffle(createDeck())
   const hands: Card[][] = Array.from({length:playerCount},()=>[])
   deck.forEach((card,i) => hands[i%playerCount].push(card))
@@ -204,6 +204,7 @@ export function createInitialGameState(playerNames: string[], mode: 'team'|'solo
     scores,
     round,
     playerNames,
+    playerCount, // store actual count
     mode,
     crownPlayer: null as number|null,
     log: [`Игра началась • ${playerNames[sp]} ходит первым (4♠)`],

@@ -120,14 +120,19 @@ export default function RoomPage() {
     if (!room || !canStart) return
     setLoading(true)
     const sorted = [...players].sort((a,b)=>a.seat-b.seat)
-    // Build player names array — only for seats that exist
-    const actualCount = sorted.length
+    const actualCount = sorted.length // Only actual players + manually added bots
+    
+    // Remap seats to 0..N-1 sequentially
     const names = sorted.map(p => p.is_bot ? (p.bot_name||'Бот') : (p.profile?.username||'Игрок'))
-    // Create game with actual player count, not max
-    const gs = createInitialGameState(names, mode as 'team'|'solo', [0,0], 1)
-    // Override player count to actual
-    gs.hands = gs.hands.slice(0, actualCount)
-    await supabase.from('game_states').upsert({ room_id:roomId, state:{...gs, playerCount:actualCount}, updated_at:new Date().toISOString() })
+    
+    // Create game with ACTUAL count, not room max
+    const gs = createInitialGameState(names, actualCount <= 4 ? (mode as 'team'|'solo') : 'solo', [0,0], 1)
+    
+    await supabase.from('game_states').upsert({ 
+      room_id: roomId, 
+      state: gs, 
+      updated_at: new Date().toISOString() 
+    })
     await supabase.from('rooms').update({ status:'playing' }).eq('id',roomId)
     setLoading(false)
   }
