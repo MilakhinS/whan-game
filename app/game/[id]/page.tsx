@@ -15,6 +15,63 @@ const GOLD_GLOW = 'rgba(201,168,76,0.35)'
 const panel = (extra={}) => ({ background:'rgba(18,14,4,0.88)', border:'1px solid rgba(201,168,76,0.18)', borderRadius:16, backdropFilter:'blur(12px)', ...extra })
 const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?GOLD:GOLD_DIM+'44'}`, background:active?'linear-gradient(135deg,#3d2a00,#6b4a0a,#3d2a00)':'rgba(255,255,255,0.03)', color:active?'#f0d080':'#5a4820', cursor:active?'pointer':'not-allowed', fontSize:14, fontWeight:600, boxShadow:active?`0 2px 16px ${GOLD_GLOW}`:'none', transition:'all 0.18s', ...extra })
 
+// ── Sound engine (Web Audio API, no files needed) ─────────────
+function playSound(type: 'card'|'pass'|'win'|'fourspade'|'reaction') {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const g = ctx.createGain()
+    g.connect(ctx.destination)
+    const osc = ctx.createOscillator()
+    osc.connect(g)
+    if (type === 'card') {
+      osc.frequency.setValueAtTime(600, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.08)
+      g.gain.setValueAtTime(0.15, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1)
+      osc.start(); osc.stop(ctx.currentTime + 0.1)
+    } else if (type === 'pass') {
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(220, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(160, ctx.currentTime + 0.15)
+      g.gain.setValueAtTime(0.08, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18)
+      osc.start(); osc.stop(ctx.currentTime + 0.2)
+    } else if (type === 'win') {
+      const notes = [523, 659, 784, 1047]
+      notes.forEach((freq, i) => {
+        const o = ctx.createOscillator(), ga = ctx.createGain()
+        o.connect(ga); ga.connect(ctx.destination)
+        o.frequency.value = freq
+        ga.gain.setValueAtTime(0.12, ctx.currentTime + i*0.12)
+        ga.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.12 + 0.3)
+        o.start(ctx.currentTime + i*0.12)
+        o.stop(ctx.currentTime + i*0.12 + 0.35)
+      })
+      return
+    } else if (type === 'fourspade') {
+      const notes = [392, 523, 659, 784, 1047]
+      notes.forEach((freq, i) => {
+        const o = ctx.createOscillator(), ga = ctx.createGain()
+        o.type = 'square'
+        o.connect(ga); ga.connect(ctx.destination)
+        o.frequency.value = freq
+        ga.gain.setValueAtTime(0.08, ctx.currentTime + i*0.08)
+        ga.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.08 + 0.25)
+        o.start(ctx.currentTime + i*0.08)
+        o.stop(ctx.currentTime + i*0.08 + 0.3)
+      })
+      return
+    } else if (type === 'reaction') {
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.1)
+      g.gain.setValueAtTime(0.1, ctx.currentTime)
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15)
+      osc.start(); osc.stop(ctx.currentTime + 0.15)
+    }
+  } catch(e) { /* silent fail on older browsers */ }
+}
+
 // ── Card components ──────────────────────────────────────────
 function CardFace({ card, selected, onClick, dim, small, tableCard }: { card:Card; selected?:boolean; onClick?:()=>void; dim?:boolean; small?:boolean; tableCard?:boolean }) {
   const gold4s = is4S(card), wild = isW(card), rj = isRJ(card), bj = isBJ(card), jk = isJk(card), red = isRed(card)
@@ -127,6 +184,10 @@ export default function GamePage() {
   const [msgInput, setMsgInput] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
   const [turnTimer, setTurnTimer] = useState(0) // seconds remaining
+  const [reactions, setReactions] = useState<{seat:number, emoji:string, id:number}[]>([])
+  const [dealing, setDealing] = useState(false)
+  const [prevRound, setPrevRound] = useState(0)
+  const [passAnims, setPassAnims] = useState<{seat:number, id:number}[]>([])
   const animRef = useRef(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const prevMsgCount = useRef(0)
@@ -137,6 +198,45 @@ export default function GamePage() {
   useEffect(()=>{
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   },[messages, chatOpen])
+
+  // ── Dealing animation on new round ──
+  useEffect(()=>{
+    if (!gs) return
+    if (gs.round !== prevRound) {
+      setPrevRound(gs.round)
+      setDealing(true)
+      setTimeout(()=>setDealing(false), 1200)
+    }
+  },[gs?.round])
+
+  // ── Sync reactions from other players ──
+  useEffect(()=>{
+    if (!gs?.reactions) return
+    const recent = gs.reactions.filter((r:any)=>r.seat!==mySeat && Date.now()-r.ts < 3000)
+    if (recent.length===0) return
+    const latest = recent[recent.length-1]
+    setReactions(prev=>{
+      if (prev.some(p=>p.id===latest.id)) return prev
+      const updated = [...prev, {seat:latest.seat, emoji:latest.emoji, id:latest.id}]
+      setTimeout(()=>setReactions(p=>p.filter(r=>r.id!==latest.id)), 2500)
+      return updated
+    })
+  },[gs?.reactions])
+
+  // ── Sound on table change ──
+  useEffect(()=>{
+    if (!gs?.tableCombo) return
+    if (is4S(gs.tableCombo.cards[0]) && gs.tableCombo.cards.length===1) {
+      playSound('fourspade')
+    } else {
+      playSound('card')
+    }
+  },[gs?.tableCombo])
+
+  // ── Sound on win ──
+  useEffect(()=>{
+    if (gs?.phase==='roundEnd') playSound('win')
+  },[gs?.phase])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
 
@@ -247,6 +347,23 @@ export default function GamePage() {
     return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
   }
 
+  function sendReaction(emoji: string) {
+    playSound('reaction')
+    const id = Date.now()
+    setReactions(prev=>[...prev, {seat:mySeat, emoji, id}])
+    // Broadcast via game state reactions field
+    const newGs = {...gs, reactions:[...(gs.reactions||[]), {seat:mySeat, emoji, id, ts:Date.now()}].slice(-20)}
+    supabase.from('game_states').update({ state:newGs, updated_at:new Date().toISOString() }).eq('room_id',roomId)
+    setTimeout(()=>setReactions(prev=>prev.filter(r=>r.id!==id)), 2500)
+  }
+
+  function showPassAnim(seat: number) {
+    playSound('pass')
+    const id = Date.now()
+    setPassAnims(prev=>[...prev, {seat, id}])
+    setTimeout(()=>setPassAnims(prev=>prev.filter(p=>p.id!==id)), 1000)
+  }
+
   async function pushState(newGs: any) {
     const withActivity = { ...newGs, lastActivity: new Date().toISOString() }
     setGs(withActivity)
@@ -342,6 +459,7 @@ export default function GamePage() {
 
   // ── Apply pass ──
   const applyPass = useCallback(async (g: any, seat: number) => {
+    showPassAnim(seat)
     const pc = g.playerCount || g.playerNames?.length || (g.mode==='team'?4:6)
     const active = pc-g.eliminated.length
     const newPC  = g.passCount+1
@@ -539,11 +657,15 @@ export default function GamePage() {
             const active = gs.currentPlayer===seat
             const ally = mode==='team' && TEAMS[TEAMS.findIndex((t:number[])=>t.includes(mySeat))].includes(seat)
             const hasCrown = gs.crownPlayer===seat
+            const hasPass = passAnims.some(p=>p.seat===seat)
+            const reaction = reactions.filter(r=>r.seat===seat).slice(-1)[0]
             return (
               <motion.div key={seat} animate={{scale:active?1.04:1}}
                 style={{ ...panel(), padding:'8px 6px', textAlign:'center', border:`1.5px solid ${active?GOLD:ally?'rgba(201,168,76,0.2)':'rgba(255,255,255,0.06)'}`, boxShadow:active?`0 0 16px ${GOLD_GLOW}`:'none', position:'relative', opacity:done?0.5:1, transition:'all 0.25s' }}>
                 <AnimatePresence>
                   {hasCrown && <motion.div initial={{y:-10,opacity:0,scale:0.5}} animate={{y:-20,opacity:1,scale:1}} exit={{opacity:0}} style={{ position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',fontSize:16,filter:'drop-shadow(0 0 6px gold)' }}>👑</motion.div>}
+                  {hasPass && <motion.div key="pass" initial={{y:0,opacity:1,scale:1}} animate={{y:-30,opacity:0,scale:1.3}} transition={{duration:0.9}} style={{ position:'absolute',top:-8,left:'50%',transform:'translateX(-50%)',fontSize:11,fontWeight:700,color:'rgba(201,168,76,0.7)',background:'rgba(0,0,0,0.6)',borderRadius:8,padding:'2px 8px',zIndex:10,whiteSpace:'nowrap' }}>ПАС</motion.div>}
+                  {reaction && <motion.div key={reaction.id} initial={{y:0,opacity:1,scale:0.5}} animate={{y:-40,opacity:0,scale:1.4}} transition={{duration:2}} style={{ position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',fontSize:22,zIndex:10 }}>{reaction.emoji}</motion.div>}
                 </AnimatePresence>
                 {gs.roundStarter===seat && !active && <div style={{ position:'absolute',top:6,right:6,width:5,height:5,borderRadius:'50%',background:GOLD }}/>}
                 <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', marginBottom:2 }}>{mode==='team'?(ally?'союзник':'соперник'):'соперник'}</div>
@@ -620,6 +742,48 @@ export default function GamePage() {
         {selCards.length>0 && <div style={{ textAlign:'center', fontSize:12, marginBottom:6, color:'rgba(201,168,76,0.7)' }}>
           {selCards.length} карт · {selCombo?<span style={{color:GOLD}}>✓ {comboLabel(selCombo)}</span>:<span style={{color:'#8b1a1a'}}>✗ Недопустимо</span>}
         </div>}
+
+        {/* Reaction buttons */}
+        <div style={{ display:'flex', gap:6, justifyContent:'center', marginBottom:8 }}>
+          {['😂','🔥','💀','👑','😤','🫡'].map(emoji=>(
+            <button key={emoji} onClick={()=>sendReaction(emoji)}
+              style={{ fontSize:18, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.12)', borderRadius:10, padding:'4px 8px', cursor:'pointer', transition:'transform 0.1s' }}
+              onMouseDown={e=>(e.currentTarget.style.transform='scale(0.85)')}
+              onMouseUp={e=>(e.currentTarget.style.transform='scale(1)')}>
+              {emoji}
+            </button>
+          ))}
+        </div>
+
+        {/* Dealing animation overlay */}
+        <AnimatePresence>
+          {dealing && (
+            <motion.div initial={{opacity:1}} animate={{opacity:1}} exit={{opacity:0}}
+              style={{ position:'fixed', inset:0, zIndex:80, pointerEvents:'none', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {[...Array(5)].map((_,i)=>(
+                <motion.div key={i}
+                  initial={{y:-200, x:(i-2)*60, opacity:0, rotate:-20+i*10}}
+                  animate={{y:0, x:0, opacity:[0,1,0], rotate:0}}
+                  transition={{delay:i*0.1, duration:0.6, ease:'easeOut'}}
+                  style={{ position:'absolute', width:40, height:58, background:'linear-gradient(160deg,#f5ede0,#e8d8c0)', border:'1.5px solid rgba(140,110,70,0.5)', borderRadius:6, boxShadow:'0 4px 12px rgba(0,0,0,0.5)' }}/>
+              ))}
+              <motion.div initial={{opacity:0,scale:0.8}} animate={{opacity:1,scale:1}} exit={{opacity:0}}
+                style={{ color:GOLD, fontSize:14, fontWeight:600, letterSpacing:3, background:'rgba(0,0,0,0.7)', padding:'8px 20px', borderRadius:10, border:`1px solid ${GOLD}44` }}>
+                НОВЫЙ РАУНД
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* My own pass anim */}
+        <AnimatePresence>
+          {passAnims.some(p=>p.seat===mySeat) && (
+            <motion.div key="mypass" initial={{y:0,opacity:1}} animate={{y:-50,opacity:0}} transition={{duration:0.8}}
+              style={{ position:'fixed', bottom:180, left:'50%', transform:'translateX(-50%)', fontSize:16, fontWeight:700, color:GOLD, background:'rgba(0,0,0,0.7)', borderRadius:10, padding:'6px 18px', zIndex:50, pointerEvents:'none' }}>
+              ПАС
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Turn timer */}
         {isMyTurn && !isSpectator && turnTimer > 0 && (
