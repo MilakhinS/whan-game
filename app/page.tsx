@@ -41,6 +41,14 @@ export default function HomePage() {
   },[themeName])
 
   useEffect(()=>{
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('timeout')) {
+      showToast('⏱ Игра закрыта из-за бездействия')
+      window.history.replaceState({}, '', '/')
+    }
+  },[])
+
+  useEffect(()=>{
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.push('/auth'); return }
       const uid = session.user.id

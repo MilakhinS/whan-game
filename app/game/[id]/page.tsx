@@ -199,8 +199,9 @@ export default function GamePage() {
   }
 
   async function pushState(newGs: any) {
-    setGs(newGs)
-    await supabase.from('game_states').update({ state:newGs, updated_at:new Date().toISOString() }).eq('room_id',roomId)
+    const withActivity = { ...newGs, lastActivity: new Date().toISOString() }
+    setGs(withActivity)
+    await supabase.from('game_states').update({ state:withActivity, updated_at:new Date().toISOString() }).eq('room_id',roomId)
   }
 
   // ── Apply play ──
@@ -304,6 +305,21 @@ export default function GamePage() {
       await pushState({ ...g, currentPlayer:next, passCount:newPC, log:[`${g.playerNames[seat]} — пас`,...(g.log||[])].slice(0,30) })
     }
   }, [roomId])
+
+  // ── Inactivity cleanup: если 5 минут без хода — закрываем комнату ──
+  useEffect(()=>{
+    const check = setInterval(async ()=>{
+      if (!gs || gs.phase==='roundEnd') return
+      const last = gs.lastActivity ? new Date(gs.lastActivity).getTime() : 0
+      const elapsed = Date.now() - last
+      if (last > 0 && elapsed > 5 * 60 * 1000) {
+        await supabase.from('rooms').update({ status:'closed' }).eq('id',roomId)
+        await supabase.from('room_players').delete().eq('room_id',roomId)
+        router.push('/')
+      }
+    }, 30000)
+    return ()=>clearInterval(check)
+  },[gs?.lastActivity, gs?.phase, roomId])
 
   // ── AI ── (only host controls bots)
   useEffect(()=>{
