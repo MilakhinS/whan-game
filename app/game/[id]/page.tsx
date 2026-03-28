@@ -123,6 +123,7 @@ export default function GamePage() {
     const newH = g.hands.map((h:Card[],i:number)=>i===seat?h.filter((c:Card)=>!cards.find(s=>s.id===c.id)):h)
     const newElim = [...g.eliminated]
     const played4S = cards.length===1 && is4S(cards[0])
+    const pc = g.playerCount || g.playerNames?.length || (g.mode==='team'?4:6)
 
     if (played4S) { setShow4S(true); setTimeout(()=>setShow4S(false),1800) }
 
@@ -133,19 +134,19 @@ export default function GamePage() {
     }
 
     const mode = g.mode
-    const pc   = mode==='team'?4:6
     let winnerResult: any = null, pts = 1, nextStarter = firstOut
 
-    if (mode==='team') {
+    if (mode==='team' && pc===4) {
       for (let ti=0;ti<TEAMS.length;ti++) {
         if (TEAMS[ti].every((p:number)=>newElim.includes(p))) {
           winnerResult=ti
           const oppActive=TEAMS[1-ti].filter((p:number)=>!newElim.includes(p))
-          if (played4S && oppActive.length===1) { pts=2; nextStarter=seat; setCrownInState(oppActive[0]) }
+          if (played4S && oppActive.length===1) { pts=2; nextStarter=seat }
           break
         }
       }
     } else {
+      // Solo or non-standard count: last player standing wins
       if (newElim.length>=pc-1) winnerResult='solo'
     }
 
@@ -156,13 +157,7 @@ export default function GamePage() {
       const newScores=[...g.scores]
       if (mode==='team') newScores[winnerResult]+=pts
       newGs.scores=newScores
-      newGs.log=[`🏆 ${mode==='team'?`Команда ${winnerResult===0?'A':'B'} победила`:'Solo победа'} ${pts>1?'• 4♠ бонус!':''}`, ...newGs.log].slice(0,30)
-      // Update MMR
-      if (seat===mySeat || TEAMS[0].includes(mySeat)) {
-        const isWin = mode==='team'?(winnerResult===TEAMS.findIndex((t:number[])=>t.includes(mySeat))):true
-        const mmr = isWin?(pts>1?20:10):(played4S&&nextActive(seat,newElim,pc)===mySeat?-10:-5)
-        await supabase.from('profiles').update({ mmr:Math.max(0,g.profiles?.[mySeat]?.mmr||1000)+mmr, wins:isWin?(g.profiles?.[mySeat]?.wins||0)+1:undefined, losses:!isWin?(g.profiles?.[mySeat]?.losses||0)+1:undefined }).eq('id',myId)
-      }
+      newGs.log=[`🏆 ${mode==='team'&&pc===4?`Команда ${winnerResult===0?'A':'B'} победила`:'Победитель есть!'} ${pts>1?'• 4♠ бонус!':''}`, ...newGs.log].slice(0,30)
     }
     await pushState(newGs)
   }, [mySeat, myId, roomId])
@@ -171,7 +166,7 @@ export default function GamePage() {
 
   // ── Apply pass ──
   const applyPass = useCallback(async (g: any, seat: number) => {
-    const pc = g.mode==='team'?4:6
+    const pc = g.playerCount || g.playerNames?.length || (g.mode==='team'?4:6)
     const active = pc-g.eliminated.length
     const newPC  = g.passCount+1
     const next   = nextActive(seat, g.eliminated, pc)
@@ -189,14 +184,12 @@ export default function GamePage() {
     if (!gs || gs.phase!=='playing') return
     if (gs.currentPlayer===mySeat) return
     if (animRef.current) return
-    const isAI = !gs.playerNames[gs.currentPlayer]?.startsWith('CPU') && gs.mode==='team'
-    // In demo/offline mode all non-me seats are AI
     const t = setTimeout(async()=>{
       animRef.current=true
       const p = gs.currentPlayer
+      const pc = gs.playerCount || gs.playerNames?.length || (gs.mode==='team'?4:6)
       const hand: Card[] = gs.hands[p]||[]
       if (!hand.length || gs.eliminated.includes(p)) {
-        const pc=gs.mode==='team'?4:6
         await pushState({...gs,currentPlayer:nextActive(p,gs.eliminated,pc)})
         animRef.current=false; return
       }
@@ -261,8 +254,9 @@ export default function GamePage() {
   const selCards: Card[] = myHand.filter((c:Card)=>selected.includes(c.id))
   const selCombo = selCards.length ? detectCombo(selCards) : null
   const mode     = gs.mode
-  const pc       = mode==='team'?4:6
-  const topSeats = Array.from({length:pc-1},(_,i)=>i+1)
+  const pc       = gs.hands?.length || gs.playerCount || gs.playerNames?.length || 4
+  // Only show seats that actually have hands (real players + bots)
+  const topSeats = Array.from({length:gs.hands?.length||pc},(_,i)=>i).filter(i=>i!==mySeat)
 
   function toggleCard(id: string) {
     if (!isMyTurn) return
