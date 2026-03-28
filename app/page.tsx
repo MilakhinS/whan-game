@@ -78,7 +78,8 @@ export default function HomePage() {
 
     loadRooms()
     const channel = supabase.channel('rooms').on('postgres_changes',{event:'*',schema:'public',table:'rooms'},()=>loadRooms()).subscribe()
-    return () => { supabase.removeChannel(channel); subscription.unsubscribe() }
+    const interval = setInterval(loadRooms, 5000)
+    return () => { supabase.removeChannel(channel); subscription.unsubscribe(); clearInterval(interval) }
   },[])
 
   async function loadProfile(uid: string) {

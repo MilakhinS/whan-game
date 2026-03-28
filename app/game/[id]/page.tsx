@@ -166,7 +166,10 @@ export default function GamePage() {
         setUnreadCount(prev => prev + 1)
       })
       .subscribe()
-    return ()=>{ supabase.removeChannel(ch) }
+    
+    // Polling fallback every 3 seconds
+    const interval = setInterval(loadGameState, 3000)
+    return ()=>{ supabase.removeChannel(ch); clearInterval(interval) }
   },[roomId])
 
   async function loadGameState() {
