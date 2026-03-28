@@ -77,8 +77,10 @@ export default function HomePage() {
     })
 
     loadRooms()
-    const channel = supabase.channel('rooms').on('postgres_changes',{event:'*',schema:'public',table:'rooms'},()=>loadRooms()).subscribe()
-    const interval = setInterval(loadRooms, 5000)
+    loadActiveGames()
+    loadLeaders()
+    const channel = supabase.channel('rooms').on('postgres_changes',{event:'*',schema:'public',table:'rooms'},()=>{ loadRooms(); loadActiveGames() }).subscribe()
+    const interval = setInterval(()=>{ loadRooms(); loadActiveGames() }, 5000)
     return () => { supabase.removeChannel(channel); subscription.unsubscribe(); clearInterval(interval) }
   },[])
 
@@ -87,9 +89,16 @@ export default function HomePage() {
     if (data) { setProfile(data); setEditUsername(data.username); if(data.theme) setThemeName(data.theme as ThemeName) }
   }
 
+  const [activeGames, setActiveGames] = useState<Room[]>([])
+
   async function loadRooms() {
     const { data } = await supabase.from('rooms').select('*').eq('status','waiting').order('created_at',{ascending:false}).limit(20)
     if (data) setRooms(data)
+  }
+
+  async function loadActiveGames() {
+    const { data } = await supabase.from('rooms').select('*').eq('status','playing').order('created_at',{ascending:false}).limit(10)
+    if (data) setActiveGames(data)
   }
 
   async function loadLeaders() {
@@ -128,7 +137,51 @@ export default function HomePage() {
     router.push(`/room/${data.id}`)
   }
 
-  async function joinRoom(room: Room) {
+  async function joinActiveGame(room: Room) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/auth'); return }
+
+    // Check if already in game
+    const { data: existing } = await supabase.from('room_players').select('*').eq('room_id', room.id).eq('player_id', user.id).single()
+    if (existing) { router.push(`/game/${room.id}`); return }
+
+    // Get game state to find free/bot seats
+    const { data: gsData } = await supabase.from('game_states').select('state').eq('room_id', room.id).single()
+    if (!gsData) { showToast('Игра не найдена'); return }
+
+    const gs = gsData.state
+    const { data: players } = await supabase.from('room_players').select('*').eq('room_id', room.id)
+    const takenSeats = (players||[]).filter((p:any)=>!p.is_bot).map((p:any)=>p.seat)
+    const botPlayers = (players||[]).filter((p:any)=>p.is_bot)
+    const pc = gs.playerCount || gs.playerNames?.length || room.max_players
+    const allSeats = Array.from({length:pc},(_,i)=>i)
+
+    // First try free seats, then bot seats
+    const freeSeat = allSeats.find(s=>!takenSeats.includes(s) && !botPlayers.find((b:any)=>b.seat===s))
+    const botSeat = botPlayers[0]
+
+    if (freeSeat !== undefined) {
+      // Join free seat
+      await supabase.from('room_players').insert({ room_id:room.id, player_id:user.id, seat:freeSeat, is_ready:true })
+      // Update player name in game state
+      const newNames = [...gs.playerNames]
+      newNames[freeSeat] = profile?.username || 'Игрок'
+      const newBotSeats = (gs.botSeats||[]).filter((s:number)=>s!==freeSeat)
+      await supabase.from('game_states').update({ state:{...gs, playerNames:newNames, botSeats:newBotSeats, spectators:[...(gs.spectators||[]), {seat:freeSeat, joinRound:gs.round}]}, updated_at:new Date().toISOString() }).eq('room_id',room.id)
+      router.push(`/game/${room.id}`)
+    } else if (botSeat) {
+      // Replace bot
+      await supabase.from('room_players').delete().eq('room_id',room.id).eq('player_id',botSeat.player_id)
+      await supabase.from('room_players').insert({ room_id:room.id, player_id:user.id, seat:botSeat.seat, is_ready:true })
+      const newNames = [...gs.playerNames]
+      newNames[botSeat.seat] = profile?.username || 'Игрок'
+      const newBotSeats = (gs.botSeats||[]).filter((s:number)=>s!==botSeat.seat)
+      await supabase.from('game_states').update({ state:{...gs, playerNames:newNames, botSeats:newBotSeats, spectators:[...(gs.spectators||[]), {seat:botSeat.seat, joinRound:gs.round}]}, updated_at:new Date().toISOString() }).eq('room_id',room.id)
+      router.push(`/game/${room.id}`)
+    } else {
+      showToast('Нет свободных мест')
+    }
+  }
     if (room.player_count >= room.max_players) { showToast('Комната заполнена'); return }
     if (room.password) { setPendingRoom(room); setEnterPass(''); setPassError('') }
     else doJoin(room,'')
@@ -218,8 +271,42 @@ export default function HomePage() {
                 <button key={f} onClick={()=>setModeFilter(f)} style={{ flex:1, padding:'9px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, border:`1px solid ${modeFilter===f?T.gold:T.goldDim+'33'}`, background:modeFilter===f?`${T.gold}22`:'rgba(255,255,255,0.02)', color:modeFilter===f?T.gold:T.goldDim, transition:'all 0.15s' }}>{lbl}</button>
               ))}
             </div>
+
+            {/* Active games */}
+            {activeGames.length > 0 && (
+              <div>
+                <div style={{ fontSize:10, color:`${T.gold}66`, letterSpacing:2, marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:'#27ae60', boxShadow:'0 0 6px #27ae60' }}/>
+                  ИДЁТ ИГРА
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  {activeGames.map(room=>(
+                    <motion.div key={room.id} whileHover={{scale:1.01}}
+                      style={{ ...panel({border:`1px solid rgba(39,174,96,0.25)`}), padding:'12px 14px', display:'flex', alignItems:'center', gap:12, background:'rgba(39,174,96,0.04)' }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
+                          <span style={{ fontSize:9, color:'#27ae60', background:'rgba(39,174,96,0.15)', border:'1px solid rgba(39,174,96,0.3)', borderRadius:10, padding:'1px 6px' }}>В игре</span>
+                        </div>
+                        <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                          <span style={badge(T.gold)}>{room.mode==='team'?'2×2':'Solo'}</span>
+                          <span style={badge(`${T.text}88`)}>{room.player_count}/{room.max_players} 👤</span>
+                        </div>
+                      </div>
+                      <button onClick={()=>joinActiveGame(room)}
+                        style={{ padding:'8px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight:600, border:'1px solid rgba(39,174,96,0.4)', background:'rgba(39,174,96,0.12)', color:'#27ae60', flexShrink:0 }}>
+                        Войти
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+                <div style={{ height:1, background:`linear-gradient(90deg,transparent,${T.goldDim}44,transparent)`, margin:'10px 0' }}/>
+              </div>
+            )}
+
+            {/* Waiting rooms */}
             {filtered.length===0 ? (
-              <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
+              <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:13, padding:'40px 0', fontStyle:'italic' }}>
                 {rooms.length===0?'Пока нет комнат — создай! ➕':'Нет комнат'}
               </div>
             ) : filtered.map(room=>(

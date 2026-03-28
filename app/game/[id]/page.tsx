@@ -370,10 +370,10 @@ export default function GamePage() {
     if (!gs) return
     const { createInitialGameState } = await import('@/lib/gameEngine')
     const newGs = createInitialGameState(gs.playerNames, gs.mode, gs.scores, gs.round+1)
-    // Preserve botSeats for AI to work
     newGs.botSeats = gs.botSeats || []
-    // Preserve crown
     newGs.crownPlayer = gs.crownPlayer ?? null
+    // Clear spectators - they join next round
+    newGs.spectators = []
     if (gs.nextRoundStarter!==null) {
       newGs.currentPlayer=gs.nextRoundStarter
       newGs.roundStarter=gs.nextRoundStarter
@@ -387,6 +387,9 @@ export default function GamePage() {
   if (!gs || !seatLoaded) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:GOLD, fontSize:18 }}>Загрузка игры…</div>
 
   const showWin = gs.phase==='roundEnd'
+  // Check if player joined mid-game (spectator until next round)
+  const spectatorInfo = (gs.spectators||[]).find((s:any)=>s.seat===mySeat)
+  const isSpectator = spectatorInfo && spectatorInfo.joinRound === gs.round
 
   const myHand   = sortHand(gs.hands[mySeat]||[])
   const isMyTurn = gs.currentPlayer===mySeat && gs.phase==='playing'
@@ -482,8 +485,8 @@ export default function GamePage() {
             : <span style={{color:'rgba(201,168,76,0.4)'}}>Ждём {gs.playerNames[gs.currentPlayer]}…</span>}
         </div>
 
-        {/* My hand */}
-        <div style={{ ...panel(), padding:'8px 6px', marginBottom:8, border:`1.5px solid ${isMyTurn?GOLD+'66':'rgba(201,168,76,0.1)'}`, boxShadow:isMyTurn?`0 0 18px ${GOLD_GLOW}`:'none', transition:'all 0.3s' }}>
+        {/* My hand - hidden for spectator */}
+        {!isSpectator && <div style={{ ...panel(), padding:'8px 6px', marginBottom:8, border:`1.5px solid ${isMyTurn?GOLD+'66':'rgba(201,168,76,0.1)'}`, boxShadow:isMyTurn?`0 0 18px ${GOLD_GLOW}`:'none', transition:'all 0.3s' }}>
           <div style={{ fontSize:9, color:'rgba(201,168,76,0.35)', textAlign:'center', marginBottom:6, letterSpacing:2 }}>
             {myDone?'ВЫШЕЛ 🎉':`ТВОИ КАРТЫ (${myHand.length})`}
           </div>
@@ -491,12 +494,20 @@ export default function GamePage() {
             : <div style={{ display:'flex', flexWrap:'wrap', gap:4, justifyContent:'center', maxHeight:220, overflowY:'auto' }}>
                 {myHand.map((card:Card)=><CardFace key={card.id} card={card} selected={selected.includes(card.id)} onClick={isMyTurn?()=>toggleCard(card.id):undefined} dim={!isMyTurn&&gs.phase==='playing'}/>)}
               </div>}
-        </div>
+        </div>}
 
         {/* Selection */}
         {selCards.length>0 && <div style={{ textAlign:'center', fontSize:12, marginBottom:6, color:'rgba(201,168,76,0.7)' }}>
           {selCards.length} карт · {selCombo?<span style={{color:GOLD}}>✓ {comboLabel(selCombo)}</span>:<span style={{color:'#8b1a1a'}}>✗ Недопустимо</span>}
         </div>}
+
+        {/* Spectator banner */}
+        {isSpectator && (
+          <div style={{ ...panel(), padding:'12px 16px', marginBottom:8, textAlign:'center', border:'1px solid rgba(255,165,0,0.3)', background:'rgba(255,165,0,0.06)' }}>
+            <div style={{ fontSize:13, color:'#f39c12', fontWeight:600 }}>👁 Ты зритель</div>
+            <div style={{ fontSize:11, color:'rgba(255,165,0,0.6)', marginTop:4 }}>Присоединишься к следующему раунду</div>
+          </div>
+        )}
 
         {/* Buttons */}
         <div style={{ display:'flex', gap:8, marginBottom:8 }}>
