@@ -70,6 +70,10 @@ export default function HomePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth'); return }
     const maxP = gameMode==='team'?4:6
+
+    // Delete empty rooms first
+    await supabase.from('rooms').delete().eq('host_id', user.id).eq('status','waiting').eq('player_count',0)
+
     const { data, error } = await supabase.from('rooms').insert({
       name: roomName.trim(),
       password: roomPass.trim()||null,
@@ -80,10 +84,10 @@ export default function HomePage() {
       status: 'waiting'
     }).select().single()
     if (error) { showToast('Ошибка создания комнаты'); setLoading(false); return }
-    // join as seat 0
     await supabase.from('room_players').insert({ room_id:data.id, player_id:user.id, seat:0, is_ready:false })
+    setRoomName('')
+    setRoomPass('')
     setLoading(false)
-    setCreating(false)
     router.push(`/room/${data.id}`)
   }
 
@@ -180,8 +184,8 @@ export default function HomePage() {
             <div style={{ ...panel(), padding:'20px 18px' }}>
               <div style={{ fontSize:11, color:'rgba(201,168,76,0.5)', letterSpacing:2, marginBottom:14 }}>СОЗДАТЬ КОМНАТУ</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                <input style={inp} placeholder="Название комнаты" value={roomName} onChange={e=>setRoomName(e.target.value)}/>
-                <input style={inp} placeholder="Пароль (необязательно)" type="password" value={roomPass} onChange={e=>setRoomPass(e.target.value)}/>
+                <input style={inp} placeholder="Название комнаты" value={roomName} onChange={e=>setRoomName(e.target.value)} autoComplete="off"/>
+                <input style={inp} placeholder="Пароль (необязательно)" type="password" value={roomPass} onChange={e=>setRoomPass(e.target.value)} autoComplete="new-password"/>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                   {([['team','2 × 2','4 игрока'],['solo','Сам за себя','до 6']] as const).map(([mode,title,sub])=>(
                     <button key={mode} onClick={()=>setGameMode(mode)} style={{ padding:'10px 6px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border:`1.5px solid ${gameMode===mode?GOLD:GOLD_DIM+'33'}`, background:gameMode===mode?'linear-gradient(135deg,rgba(201,168,76,0.14),rgba(201,168,76,0.04))':'rgba(255,255,255,0.02)', color:gameMode===mode?GOLD:'#5a4020', transition:'all 0.18s' }}>

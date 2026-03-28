@@ -128,7 +128,20 @@ export default function RoomPage() {
 
   async function leaveRoom() {
     await supabase.from('room_players').delete().eq('room_id',roomId).eq('player_id',myId)
-    await supabase.from('rooms').update({ player_count: Math.max(0,(room?.player_count||1)-1) }).eq('id',roomId)
+    // Check if any real players left
+    const { data: remaining } = await supabase.from('room_players')
+      .select('*').eq('room_id',roomId).eq('is_bot',false)
+    if (!remaining || remaining.length === 0) {
+      // No real players — delete the whole room
+      await supabase.from('room_players').delete().eq('room_id',roomId)
+      await supabase.from('rooms').delete().eq('id',roomId)
+    } else {
+      await supabase.from('rooms').update({ player_count: Math.max(0,(room?.player_count||1)-1) }).eq('id',roomId)
+      // If host left, assign new host
+      if (room?.host_id === myId && remaining.length > 0) {
+        await supabase.from('rooms').update({ host_id: remaining[0].player_id }).eq('id',roomId)
+      }
+    }
     router.push('/')
   }
 
