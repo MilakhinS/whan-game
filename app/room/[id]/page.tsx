@@ -89,8 +89,10 @@ export default function RoomPage() {
     if (freeSeat===undefined) return
     const botIdx = players.filter((p:any)=>p.is_bot).length
     const botName = BOT_NAMES[botIdx % BOT_NAMES.length]
-    const botId = `bot_${Date.now()}`
-    await supabase.from('room_players').insert({
+    // Generate a valid UUID-like id for bot
+    const botId = crypto.randomUUID ? crypto.randomUUID() : `00000000-0000-4000-8000-${Date.now().toString(16).padStart(12,'0')}`
+    
+    const { error } = await supabase.from('room_players').insert({
       room_id: roomId,
       player_id: botId,
       seat: freeSeat,
@@ -98,6 +100,7 @@ export default function RoomPage() {
       is_bot: true,
       bot_name: botName,
     })
+    if (error) { console.error('Bot insert error:', error); return }
     await supabase.from('rooms').update({ player_count: players.length+1 }).eq('id',roomId)
     loadPlayers()
   }
