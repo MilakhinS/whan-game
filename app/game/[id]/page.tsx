@@ -392,14 +392,14 @@ export default function GamePage() {
   const isSpectator = spectatorInfo && spectatorInfo.joinRound === gs.round
 
   const myHand   = sortHand(gs.hands[mySeat]||[])
-  const isMyTurn = gs.currentPlayer===mySeat && gs.phase==='playing'
+  const isMyTurn = gs.currentPlayer===mySeat && gs.phase==='playing' && !isSpectator
   const myDone   = gs.eliminated.includes(mySeat)
   const selCards: Card[] = myHand.filter((c:Card)=>selected.includes(c.id))
   const selCombo = selCards.length ? detectCombo(selCards) : null
   const mode     = gs.mode
-  const pc       = gs.hands?.length || gs.playerCount || gs.playerNames?.length || 4
-  // Only show seats that actually have hands (real players + bots)
-  const topSeats = Array.from({length:gs.hands?.length||pc},(_,i)=>i).filter(i=>i!==mySeat)
+  // Use hands array length as single source of truth for player count
+  const pc       = Array.isArray(gs.hands) ? gs.hands.length : (gs.playerCount || gs.playerNames?.length || 4)
+  const topSeats = Array.from({length:pc},(_,i)=>i).filter(i=>i!==mySeat)
 
   function toggleCard(id: string) {
     if (!isMyTurn) return
