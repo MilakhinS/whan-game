@@ -116,7 +116,8 @@ export default function GamePage() {
   const [gs, setGs]           = useState<any>(null)
   const [myId, setMyId]       = useState('')
   const [myUsername, setMyUsername] = useState('')
-  const [mySeat, setMySeat]   = useState(0)
+  const [mySeat, setMySeat]   = useState(-1) // -1 = not loaded yet
+  const [seatLoaded, setSeatLoaded] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
   const [show4S, setShow4S]   = useState(false)
   const [toast, setToast]     = useState('')
@@ -153,7 +154,10 @@ export default function GamePage() {
     supabase.auth.getUser().then(({data})=>{
       if (!data.user) { router.push('/auth'); return }
       setMyId(data.user.id)
-      supabase.from('room_players').select('seat').eq('room_id',roomId).eq('player_id',data.user.id).single().then(({data:p})=>{ if(p) setMySeat(p.seat) })
+      supabase.from('room_players').select('seat').eq('room_id',roomId).eq('player_id',data.user.id).single().then(({data:p})=>{ 
+        if(p) { setMySeat(p.seat); setSeatLoaded(true) }
+        else setSeatLoaded(true) // spectator mode
+      })
       supabase.from('profiles').select('username').eq('id',data.user.id).single().then(({data:p})=>{ if(p) setMyUsername(p.username) })
     })
     loadGameState()
@@ -363,7 +367,7 @@ export default function GamePage() {
     setSelected([])
   }
 
-  if (!gs) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:GOLD, fontSize:18 }}>Загрузка игры…</div>
+  if (!gs || !seatLoaded) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:GOLD, fontSize:18 }}>Загрузка игры…</div>
 
   const showWin = gs.phase==='roundEnd'
 
