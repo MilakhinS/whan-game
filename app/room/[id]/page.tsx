@@ -36,6 +36,9 @@ export default function RoomPage() {
   const [loading, setLoading]   = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [msgInput, setMsgInput] = useState('')
+  const [toast, setToast]       = useState('')
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''), 2500) }
   const chatRef = useRef<HTMLDivElement>(null)
 
   const isHost = !!(myId && room && room.host_id === myId)
@@ -310,6 +313,7 @@ export default function RoomPage() {
       </div>
 
       <style>{`@keyframes smokeRise{0%{transform:translateY(0) scale(1);opacity:0}20%{opacity:1}100%{transform:translateY(-80vh) scale(3);opacity:0}}`}</style>
+      {toast && <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#3d2a00,#6b4a0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, whiteSpace:'nowrap' }}>{toast}</div>}
     </div>
   )
 }
