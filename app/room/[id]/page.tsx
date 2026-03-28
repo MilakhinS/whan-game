@@ -150,8 +150,11 @@ export default function RoomPage() {
     setLoading(true)
     const sorted = [...players].sort((a,b)=>a.seat-b.seat)
     const names = sorted.map(p => p.is_bot ? (p.bot_name||'Бот') : (p.profile?.username||'Игрок'))
+    // botSeats = indices in the sorted array (0,1,2...) not room seats
+    const botSeats = sorted.map((p,i)=>p.is_bot?i:-1).filter(i=>i>=0)
     const gs = createInitialGameState(names, mode as 'team'|'solo', [0,0], 1)
-    await supabase.from('game_states').upsert({ room_id:roomId, state:gs, updated_at:new Date().toISOString() })
+    const gsWithBots = { ...gs, botSeats }
+    await supabase.from('game_states').upsert({ room_id:roomId, state:gsWithBots, updated_at:new Date().toISOString() })
     await supabase.from('rooms').update({ status:'playing' }).eq('id',roomId)
     setLoading(false)
   }
