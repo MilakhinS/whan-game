@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: radial-gradient(ellipse at 30% 20%, #1a0c03 0%, #0a0800 60%, #000 100%);
+  min-height: 100vh;
+  color: #e8d5a3;
+  font-family: Georgia, 'Times New Roman', serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, button { font-family: inherit; }
+button { cursor: pointer; }
+
+@keyframes smokeRise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-80vh) scale(3); opacity: 0; }
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(201,168,76,0.3); }
+  50% { box-shadow: 0 0 24px rgba(201,168,76,0.7); }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 2px; }
+input::placeholder { color: rgba(201,168,76,0.3) !important; }
