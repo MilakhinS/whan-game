@@ -157,7 +157,31 @@ export default function GamePage() {
       const newScores=[...g.scores]
       if (mode==='team') newScores[winnerResult]+=pts
       newGs.scores=newScores
-      newGs.log=[`🏆 ${mode==='team'&&pc===4?`Команда ${winnerResult===0?'A':'B'} победила`:'Победитель есть!'} ${pts>1?'• 4♠ бонус!':''}`, ...newGs.log].slice(0,30)
+      newGs.log=[`🏆 ${mode==='team'&&pc===4?`Команда ${winnerResult===0?'A':'B'} победила`:'Победитель!'} ${pts>1?'• 4♠ бонус!':''}`, ...newGs.log].slice(0,30)
+
+      // Update MMR for the real player
+      if (myId) {
+        let mmrDelta = 0
+        if (mode==='team' && pc===4) {
+          const myTeam = TEAMS.findIndex((t:number[])=>t.includes(mySeat))
+          const isWin = winnerResult === myTeam
+          mmrDelta = isWin ? (pts>1?20:10) : -5
+        } else {
+          // Solo: first eliminated = winner +10, last remaining = -10, middle = +5
+          const isWinner = newElim.length > 0 && newElim[0] === mySeat
+          const isLoser  = !newElim.includes(mySeat) // still has cards = last one standing
+          mmrDelta = isWinner ? 10 : isLoser ? -10 : 5
+        }
+        supabase.from('profiles').select('mmr,wins,losses,streak').eq('id',myId).single().then(({data})=>{
+          if (!data) return
+          supabase.from('profiles').update({
+            mmr: Math.max(0, (data.mmr||1000) + mmrDelta),
+            wins: mmrDelta > 0 ? (data.wins||0)+1 : data.wins,
+            losses: mmrDelta < 0 ? (data.losses||0)+1 : data.losses,
+            streak: mmrDelta > 0 ? (data.streak||0)+1 : 0,
+          }).eq('id',myId)
+        })
+      }
     }
     await pushState(newGs)
   }, [mySeat, myId, roomId])
