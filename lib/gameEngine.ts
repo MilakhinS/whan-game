@@ -8,6 +8,9 @@ export const POWER: Record<string,number> = Object.fromEntries(RANK_ORDER.map((r
 
 export type Card = { rank: string; suit: string; id: string }
 export type ComboType = 'single'|'pair'|'triple'|'quad'|'straight'|'ashlan'
+
+// Helper to compare combo types safely
+const typeIs = (c: Combo, t: string) => (c.type as string) === t
 export type Combo = { type: ComboType; power: number; length?: number; cards: Card[] }
 export type GamePhase = 'playing'|'roundEnd'
 
@@ -129,26 +132,26 @@ export function detectCombo(cards: Card[]): Combo | null {
 }
 
 export function canBeat(atk: Combo, def: Combo): boolean {
+  const atkType = atk.type as string
+  const defType = def.type as string
   // Quad beats everything
-  if (def.type === 'quad') return true
+  if (defType === 'quad') return true
   // Red Joker single can't be beaten except by quad
-  if (atk.type === 'single' && isRJ(atk.cards[0])) return false
-  // Ashlan: can only be beaten by quad
-  if (atk.type === 'ashlan') return false // already handled quad above
+  if (atkType === 'single' && isRJ(atk.cards[0])) return false
   // Triple beats single/pair/straight/ashlan (not triple/quad)
-  if (def.type === 'triple') {
-    if (['single','pair','straight','ashlan'].includes(atk.type)) return true
-    if (atk.type === 'triple') return def.power > atk.power
+  if (defType === 'triple') {
+    if (['single','pair','straight','ashlan'].includes(atkType)) return true
+    if (atkType === 'triple') return def.power > atk.power
     return false
   }
-  // Ashlan can only be beaten by quad (handled above) or higher ashlan of same length
-  if (atk.type === 'ashlan') {
-    if (def.type === 'ashlan') return def.length === atk.length && def.power > atk.power
+  // Ashlan can only be beaten by quad or higher ashlan of same pair count
+  if (atkType === 'ashlan') {
+    if (defType === 'ashlan') return (def.length||0) === (atk.length||0) && def.power > atk.power
     return false
   }
   // Same type comparison
-  if (atk.type === def.type) {
-    if (atk.type === 'straight') return def.length === atk.length && def.power > atk.power
+  if (atkType === defType) {
+    if (atkType === 'straight') return (def.length||0) === (atk.length||0) && def.power > atk.power
     return def.power > atk.power
   }
   return false
