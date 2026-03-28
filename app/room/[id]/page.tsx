@@ -47,7 +47,13 @@ export default function RoomPage() {
 
   useEffect(()=>{
     supabase.auth.getUser().then(({data})=>{
-      if (!data.user) { router.push('/auth'); return }
+      if (!data.user) {
+        // Save current room URL so we can return after login
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('returnUrl', window.location.pathname)
+        }
+        router.push('/auth'); return
+      }
       setMyId(data.user.id)
       supabase.from('profiles').select('username').eq('id',data.user.id).single().then(({data:p})=>{
         if (p) setMyUsername(p.username)
@@ -201,6 +207,12 @@ export default function RoomPage() {
               {mode==='team'?'2×2':'Solo'}
             </span>
             <span style={{ fontSize:11, color:'rgba(201,168,76,0.4)' }}>{totalCount}/{maxP}</span>
+            <button onClick={()=>{
+              navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`)
+              showToast('🔗 Ссылка скопирована!')
+            }} style={{ padding:'5px 12px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:11, border:`1px solid ${GOLD}44`, background:`${GOLD}11`, color:GOLD }}>
+              🔗
+            </button>
           </div>
         </div>
 

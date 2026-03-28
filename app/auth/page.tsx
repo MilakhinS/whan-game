@@ -41,11 +41,15 @@ export default function AuthPage() {
           options: { data: { username: username.trim() } }
         })
         if (err) throw err
-        router.push('/')
+        const returnUrl = sessionStorage.getItem('returnUrl') || '/'
+        sessionStorage.removeItem('returnUrl')
+        router.push(returnUrl)
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({ email, password })
         if (err) throw err
-        router.push('/')
+        const returnUrl = sessionStorage.getItem('returnUrl') || '/'
+        sessionStorage.removeItem('returnUrl')
+        router.push(returnUrl)
       }
     } catch (e: any) {
       setError(e.message || 'Ошибка входа')
