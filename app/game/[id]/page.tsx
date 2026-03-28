@@ -369,7 +369,7 @@ export default function GamePage() {
   async function nextRound() {
     if (!gs) return
     const { createInitialGameState } = await import('@/lib/gameEngine')
-    const newGs = createInitialGameState(gs.playerNames, gs.mode, gs.scores, gs.round+1)
+    const newGs: any = createInitialGameState(gs.playerNames, gs.mode, gs.scores, gs.round+1)
     newGs.botSeats = gs.botSeats || []
     newGs.crownPlayer = gs.crownPlayer ?? null
     // Clear spectators - they join next round
