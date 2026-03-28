@@ -135,7 +135,6 @@ export default function GamePage() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
 
-  // Unread counter
   useEffect(()=>{
     if (chatOpen) {
       setUnreadCount(0)
@@ -148,18 +147,6 @@ export default function GamePage() {
       setUnreadCount(messages.length - prevMsgCount.current)
     }
     if (chatOpen) prevMsgCount.current = messages.length
-  },[messages.length])
-
-  const [unreadCount, setUnreadCount] = useState(0)
-
-  useEffect(()=>{
-    if (chatOpen) setUnreadCount(0)
-  },[chatOpen])
-
-  useEffect(()=>{
-    if (!chatOpen && messages.length > 0) {
-      setUnreadCount(prev => prev + 1)
-    }
   },[messages.length])
 
   useEffect(()=>{
