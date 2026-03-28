@@ -163,10 +163,7 @@ export default function GamePage() {
       .on('postgres_changes',{event:'*',schema:'public',table:'game_states',filter:`room_id=eq.${roomId}`},({new:n})=>{ if(n) setGs((n as any).state) })
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'room_messages',filter:`room_id=eq.${roomId}`},(payload)=>{
         setMessages(prev=>[...prev, payload.new])
-        setChatOpen(open => {
-          if (!open) setUnread(u=>u+1)
-          return open
-        })
+        setUnreadCount(prev => prev + 1)
       })
       .subscribe()
     return ()=>{ supabase.removeChannel(ch) }
