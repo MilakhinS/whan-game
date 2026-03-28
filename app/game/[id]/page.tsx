@@ -185,26 +185,29 @@ export default function GamePage() {
     if (gs.currentPlayer===mySeat) return
     if (animRef.current) return
     const t = setTimeout(async()=>{
+      if (animRef.current) return
       animRef.current=true
-      const p = gs.currentPlayer
-      const pc = gs.playerCount || gs.playerNames?.length || (gs.mode==='team'?4:6)
-      const hand: Card[] = gs.hands[p]||[]
-      if (!hand.length || gs.eliminated.includes(p)) {
-        await pushState({...gs,currentPlayer:nextActive(p,gs.eliminated,pc)})
-        animRef.current=false; return
-      }
-      const mustFirst = false // 4♠ only determines who goes first, not what to play
-      const playCards = aiChoosePlay(hand, gs.tableCombo, mustFirst)
-      if (playCards) {
-        const combo = detectCombo(playCards)
-        if (combo && (!gs.tableCombo || canBeat(gs.tableCombo,combo) || mustFirst)) {
-          await applyPlay(gs, p, playCards)
+      try {
+        const p = gs.currentPlayer
+        const pc = gs.playerCount || gs.playerNames?.length || (gs.mode==='team'?4:6)
+        const hand: Card[] = gs.hands[p]||[]
+        if (!hand.length || gs.eliminated.includes(p)) {
+          await pushState({...gs,currentPlayer:nextActive(p,gs.eliminated,pc)})
+          return
+        }
+        const playCards = aiChoosePlay(hand, gs.tableCombo, false)
+        if (playCards) {
+          const combo = detectCombo(playCards)
+          if (combo && (!gs.tableCombo || canBeat(gs.tableCombo,combo))) {
+            await applyPlay(gs, p, playCards)
+          } else { await applyPass(gs, p) }
         } else { await applyPass(gs, p) }
-      } else { await applyPass(gs, p) }
-      animRef.current=false
+      } finally {
+        animRef.current=false
+      }
     }, 900)
-    return ()=>{ clearTimeout(t) }
-  },[gs?.currentPlayer, gs?.phase, mySeat])
+    return ()=>{ clearTimeout(t); animRef.current=false }
+  },[gs?.currentPlayer, gs?.phase, gs?.passCount, mySeat])
 
   // ── Human actions ──
   async function handlePlay() {
