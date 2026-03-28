@@ -116,7 +116,7 @@ export default function GamePage() {
   const [gs, setGs]           = useState<any>(null)
   const [myId, setMyId]       = useState('')
   const [myUsername, setMyUsername] = useState('')
-  const [mySeat, setMySeat]   = useState(-1) // -1 = not loaded yet
+  const [mySeat, setMySeat]   = useState(-1)
   const [seatLoaded, setSeatLoaded] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
   const [show4S, setShow4S]   = useState(false)
@@ -126,15 +126,64 @@ export default function GamePage() {
   const [messages, setMessages] = useState<any[]>([])
   const [msgInput, setMsgInput] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [turnTimer, setTurnTimer] = useState(0) // seconds remaining
   const animRef = useRef(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const prevMsgCount = useRef(0)
+  const turnTimerRef = useRef<NodeJS.Timeout|null>(null)
+  const handlePassRef = useRef<(()=>void)|null>(null)
+  const isSpectatorRef = useRef(false)
 
   useEffect(()=>{
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   },[messages, chatOpen])
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
+
+  // ── Turn timer: 30 sec auto-pass ──
+  useEffect(()=>{
+    if (turnTimerRef.current) clearInterval(turnTimerRef.current)
+    if (!gs || gs.phase!=='playing' || gs.currentPlayer!==mySeat || mySeat===-1) {
+      setTurnTimer(0)
+      return
+    }
+    setTurnTimer(30)
+    turnTimerRef.current = setInterval(()=>{
+      setTurnTimer(prev=>{
+        if (prev <= 1) {
+          clearInterval(turnTimerRef.current!)
+          handlePassRef.current?.()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return ()=>{ if(turnTimerRef.current) clearInterval(turnTimerRef.current) }
+  },[gs?.currentPlayer, gs?.phase, mySeat])
+
+  // ── Turn timer: 30 sec autopass ──
+  useEffect(()=>{
+    if (turnTimerRef.current) clearInterval(turnTimerRef.current)
+    if (!gs || gs.phase!=='playing' || gs.currentPlayer!==mySeat || mySeat===-1) {
+      setTurnTimer(0)
+      return
+    }
+    setTurnTimer(30)
+    turnTimerRef.current = setInterval(()=>{
+      setTurnTimer(prev=>{
+        if (prev <= 1) {
+          clearInterval(turnTimerRef.current!)
+          // Autopass
+          if (gs.tableCombo) {
+            handleAutoPass()
+          }
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return ()=>{ if (turnTimerRef.current) clearInterval(turnTimerRef.current) }
+  },[gs?.currentPlayer, gs?.phase, mySeat])
 
   useEffect(()=>{
     if (chatOpen) {
@@ -382,6 +431,27 @@ export default function GamePage() {
     setSelected([])
   }
 
+  async function handleAutoPass() {
+    const { data } = await supabase.from('game_states').select('state').eq('room_id',roomId).single()
+    if (!data) return
+    const freshGs = data.state
+    if (freshGs.currentPlayer !== mySeat || freshGs.phase !== 'playing') return
+    if (freshGs.tableCombo) {
+      showToast('⏱ Время вышло — автопас!')
+      await applyPass(freshGs, mySeat)
+    } else {
+      const myHand = sortHand(freshGs.hands[mySeat]||[])
+      if (myHand.length > 0) {
+        showToast('⏱ Время вышло — автоход!')
+        await applyPlay(freshGs, mySeat, [myHand[0]])
+      }
+    }
+    setSelected([])
+  }
+
+  // Keep ref updated so timer useEffect can call it
+  handlePassRef.current = handleAutoPass
+
   async function nextRound() {
     if (!gs) return
     const { createInitialGameState } = await import('@/lib/gameEngine')
@@ -492,13 +562,33 @@ export default function GamePage() {
           ) : <div style={{ color:'rgba(201,168,76,0.2)', fontStyle:'italic', fontSize:13 }}>Стол пуст — играй что хочешь</div>}
         </div>
 
-        {/* Status */}
-        <div style={{ textAlign:'center', fontSize:12, marginBottom:6, minHeight:18 }}>
-          {gs.phase==='roundEnd'
-            ? <span style={{color:GOLD,fontWeight:700}}>🏆 {mode==='team'?`Команда ${gs.winner===0?'A':'B'} победила`:'Solo раунд завершён'} {gs.winPoints>1?'• +2 бонус!':''}</span>
-            : myDone ? <span style={{color:GOLD}}>✅ Ты вышел! Союзник продолжает…</span>
-            : isMyTurn ? <span style={{color:GOLD,fontWeight:600}}>🪔 Твой ход</span>
-            : <span style={{color:'rgba(201,168,76,0.4)'}}>Ждём {gs.playerNames[gs.currentPlayer]}…</span>}
+        {/* Status + Timer */}
+        <div style={{ textAlign:'center', fontSize:12, marginBottom:6, minHeight:18, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+          <div>
+            {gs.phase==='roundEnd'
+              ? <span style={{color:GOLD,fontWeight:700}}>🏆 {mode==='team'?`Команда ${gs.winner===0?'A':'B'} победила`:'Solo раунд завершён'} {gs.winPoints>1?'• +2 бонус!':''}</span>
+              : myDone ? <span style={{color:GOLD}}>✅ Ты вышел! Союзник продолжает…</span>
+              : isMyTurn ? <span style={{color:GOLD,fontWeight:600}}>🪔 Твой ход</span>
+              : <span style={{color:'rgba(201,168,76,0.4)'}}>Ждём {gs.playerNames[gs.currentPlayer]}…</span>}
+          </div>
+          {isMyTurn && turnTimer > 0 && (
+            <div style={{ position:'relative', width:28, height:28, flexShrink:0 }}>
+              <svg width="28" height="28" style={{ transform:'rotate(-90deg)' }}>
+                <circle cx="14" cy="14" r="11" fill="none" stroke="rgba(201,168,76,0.15)" strokeWidth="2.5"/>
+                <circle cx="14" cy="14" r="11" fill="none"
+                  stroke={turnTimer<=10?'#e74c3c':GOLD}
+                  strokeWidth="2.5"
+                  strokeDasharray={`${2*Math.PI*11}`}
+                  strokeDashoffset={`${2*Math.PI*11*(1-turnTimer/30)}`}
+                  strokeLinecap="round"
+                  style={{transition:'stroke-dashoffset 0.9s linear, stroke 0.3s'}}
+                />
+              </svg>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:turnTimer<=10?'#e74c3c':GOLD }}>
+                {turnTimer}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* My hand - hidden for spectator */}
@@ -516,6 +606,27 @@ export default function GamePage() {
         {selCards.length>0 && <div style={{ textAlign:'center', fontSize:12, marginBottom:6, color:'rgba(201,168,76,0.7)' }}>
           {selCards.length} карт · {selCombo?<span style={{color:GOLD}}>✓ {comboLabel(selCombo)}</span>:<span style={{color:'#8b1a1a'}}>✗ Недопустимо</span>}
         </div>}
+
+        {/* Turn timer */}
+        {isMyTurn && !isSpectator && turnTimer > 0 && (
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, justifyContent:'center' }}>
+            <div style={{ position:'relative', width:32, height:32 }}>
+              <svg width="32" height="32" style={{ transform:'rotate(-90deg)' }}>
+                <circle cx="16" cy="16" r="13" fill="none" stroke="rgba(201,168,76,0.15)" strokeWidth="3"/>
+                <circle cx="16" cy="16" r="13" fill="none" stroke={turnTimer<=10?'#e74c3c':GOLD} strokeWidth="3"
+                  strokeDasharray={`${2*Math.PI*13}`}
+                  strokeDashoffset={`${2*Math.PI*13*(1-turnTimer/30)}`}
+                  style={{ transition:'stroke-dashoffset 1s linear, stroke 0.3s' }}/>
+              </svg>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:turnTimer<=10?'#e74c3c':GOLD }}>
+                {turnTimer}
+              </div>
+            </div>
+            <div style={{ fontSize:11, color:turnTimer<=10?'#e74c3c':'rgba(201,168,76,0.6)' }}>
+              {turnTimer<=10?'⚠️ Ходи быстрее!':'Твой ход'}
+            </div>
+          </div>
+        )}
 
         {/* Spectator banner */}
         {isSpectator && (
