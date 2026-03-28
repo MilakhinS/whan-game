@@ -81,16 +81,11 @@ function detectAshlan(cards: Card[]): Combo | null {
 export function detectCombo(cards: Card[]): Combo | null {
   if (!cards?.length) return null
 
-  // Try ashlan first (3+ consecutive pairs)
-  if (cards.length >= 6 && cards.length % 2 === 0) {
-    const ash = detectAshlan(cards)
-    if (ash) return ash
-  }
-
   const n = cards.length
   const wilds = cards.filter(isW)
   const real  = cards.filter(c=>!isW(c))
   const wc    = wilds.length
+
   if (wc === n) return null
 
   if (n === 1) {
@@ -115,6 +110,13 @@ export function detectCombo(cards: Card[]): Combo | null {
     if (u.length <= 1 && real.length + wc === 4)
       return { type:'quad', power:cp(real[0] ?? {rank:'4',suit:'',id:''}), cards }
   }
+
+  // Try ashlan BEFORE straight (6+ even cards, consecutive pairs)
+  if (n >= 6 && n % 2 === 0 && wc === 0) {
+    const ash = detectAshlan(cards)
+    if (ash) return ash
+  }
+
   if (n >= 4) {
     if (real.some(isJk)) return null
     const powers = real.map(cp).sort((a,b)=>a-b)
@@ -134,21 +136,23 @@ export function detectCombo(cards: Card[]): Combo | null {
 export function canBeat(atk: Combo, def: Combo): boolean {
   const atkType = atk.type as string
   const defType = def.type as string
+
   // Quad beats everything
   if (defType === 'quad') return true
+
   // Red Joker single can't be beaten except by quad
   if (atkType === 'single' && isRJ(atk.cards[0])) return false
-  // Triple beats single/pair/straight/ashlan (not triple/quad)
+
+  // Ashlan can ONLY be beaten by quad (handled above) — nothing else
+  if (atkType === 'ashlan') return false
+
+  // Triple beats single/pair/straight/ashlan
   if (defType === 'triple') {
     if (['single','pair','straight','ashlan'].includes(atkType)) return true
     if (atkType === 'triple') return def.power > atk.power
     return false
   }
-  // Ashlan can only be beaten by quad or higher ashlan of same pair count
-  if (atkType === 'ashlan') {
-    if (defType === 'ashlan') return (def.length||0) === (atk.length||0) && def.power > atk.power
-    return false
-  }
+
   // Same type comparison
   if (atkType === defType) {
     if (atkType === 'straight') return (def.length||0) === (atk.length||0) && def.power > atk.power
