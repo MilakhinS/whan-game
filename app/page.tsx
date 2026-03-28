@@ -43,15 +43,47 @@ export default function HomePage() {
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
 
   useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>{
-      if (!data.user) { router.push('/auth'); return }
-      loadProfile(data.user.id)
+    // Handle OAuth callback and session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { router.push('/auth'); return }
+      const uid = session.user.id
+      // Check if profile exists, create if not (for Google users)
+      const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).single()
+      if (!prof) {
+        const username = session.user.user_metadata?.full_name 
+          || session.user.user_metadata?.name
+          || session.user.email?.split('@')[0] 
+          || 'Player'
+        await supabase.from('profiles').insert({ id: uid, username })
+        loadProfile(uid)
+      } else {
+        setProfile(prof)
+      }
     })
-    loadRooms()
 
-    // Realtime rooms
+    // Listen for auth state changes (handles Google OAuth redirect)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const uid = session.user.id
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).single()
+        if (!prof) {
+          const username = session.user.user_metadata?.full_name
+            || session.user.user_metadata?.name
+            || session.user.email?.split('@')[0]
+            || 'Player'
+          await supabase.from('profiles').insert({ id: uid, username })
+          loadProfile(uid)
+        } else {
+          setProfile(prof)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        router.push('/auth')
+      }
+    })
+
+    loadRooms()
     const channel = supabase.channel('rooms').on('postgres_changes',{event:'*',schema:'public',table:'rooms'},()=>loadRooms()).subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { supabase.removeChannel(channel); subscription.unsubscribe() }
   },[])
 
   async function loadProfile(uid: string) {
