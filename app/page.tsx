@@ -26,33 +26,32 @@ function Smoke() {
 
 export default function HomePage() {
   const router = useRouter()
-  const [profile, setProfile]     = useState<Profile|null>(null)
-  const [rooms, setRooms]         = useState<Room[]>([])
-  const [search, setSearch]       = useState('')
+  const [profile, setProfile]       = useState<Profile|null>(null)
+  const [rooms, setRooms]           = useState<Room[]>([])
+  const [leaders, setLeaders]       = useState<Profile[]>([])
+  const [search, setSearch]         = useState('')
   const [modeFilter, setModeFilter] = useState<'all'|'team'|'solo'>('all')
-  const [creating, setCreating]   = useState(false)
-  const [roomName, setRoomName]   = useState('')
-  const [roomPass, setRoomPass]   = useState('')
-  const [gameMode, setGameMode]   = useState<'team'|'solo'>('team')
+  const [roomName, setRoomName]     = useState('')
+  const [roomPass, setRoomPass]     = useState('')
+  const [gameMode, setGameMode]     = useState<'team'|'solo'>('team')
   const [pendingRoom, setPendingRoom] = useState<Room|null>(null)
-  const [enterPass, setEnterPass] = useState('')
-  const [passError, setPassError] = useState('')
-  const [toast, setToast]         = useState('')
-  const [loading, setLoading]     = useState(false)
+  const [enterPass, setEnterPass]   = useState('')
+  const [passError, setPassError]   = useState('')
+  const [toast, setToast]           = useState('')
+  const [loading, setLoading]       = useState(false)
+  const [activeTab, setActiveTab]   = useState<'rooms'|'create'|'leaders'>('rooms')
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
 
   useEffect(()=>{
-    // Handle OAuth callback and session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { router.push('/auth'); return }
       const uid = session.user.id
-      // Check if profile exists, create if not (for Google users)
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).single()
       if (!prof) {
-        const username = session.user.user_metadata?.full_name 
+        const username = session.user.user_metadata?.full_name
           || session.user.user_metadata?.name
-          || session.user.email?.split('@')[0] 
+          || session.user.email?.split('@')[0]
           || 'Player'
         await supabase.from('profiles').insert({ id: uid, username })
         loadProfile(uid)
@@ -61,7 +60,6 @@ export default function HomePage() {
       }
     })
 
-    // Listen for auth state changes (handles Google OAuth redirect)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         const uid = session.user.id
@@ -82,6 +80,7 @@ export default function HomePage() {
     })
 
     loadRooms()
+    loadLeaders()
     const channel = supabase.channel('rooms').on('postgres_changes',{event:'*',schema:'public',table:'rooms'},()=>loadRooms()).subscribe()
     return () => { supabase.removeChannel(channel); subscription.unsubscribe() }
   },[])
@@ -96,16 +95,18 @@ export default function HomePage() {
     if (data) setRooms(data)
   }
 
+  async function loadLeaders() {
+    const { data } = await supabase.from('profiles').select('*').order('mmr',{ascending:false}).limit(50)
+    if (data) setLeaders(data)
+  }
+
   async function createRoom() {
     if (!roomName.trim()) { showToast('Введите название'); return }
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth'); return }
     const maxP = gameMode==='team'?4:6
-
-    // Delete empty rooms first
     await supabase.from('rooms').delete().eq('host_id', user.id).eq('status','waiting').eq('player_count',0)
-
     const { data, error } = await supabase.from('rooms').insert({
       name: roomName.trim(),
       password: roomPass.trim()||null,
@@ -125,18 +126,14 @@ export default function HomePage() {
 
   async function joinRoom(room: Room) {
     if (room.player_count >= room.max_players) { showToast('Комната заполнена'); return }
-    if (room.password) {
-      setPendingRoom(room); setEnterPass(''); setPassError('')
-    } else {
-      doJoin(room, '')
-    }
+    if (room.password) { setPendingRoom(room); setEnterPass(''); setPassError('') }
+    else doJoin(room, '')
   }
 
   async function doJoin(room: Room, pass: string) {
     if (room.password && pass !== room.password) { setPassError('Неверный пароль'); return }
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth'); return }
-    // Find free seat
     const { data: players } = await supabase.from('room_players').select('seat').eq('room_id',room.id)
     const taken = (players||[]).map((p:any)=>p.seat)
     const seat = [0,1,2,3,4,5].find(s=>!taken.includes(s)) ?? 0
@@ -157,7 +154,8 @@ export default function HomePage() {
     return m&&s
   })
 
-  const [activeTab, setActiveTab] = useState<'rooms'|'create'>('rooms')
+  const medalEmoji = (i: number) => i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '
+  const myRank = leaders.findIndex(l=>l.id===profile?.id)
 
   return (
     <div style={{ minHeight:'100vh', maxWidth:600, margin:'0 auto', padding:'12px 12px 80px', position:'relative', color:'#e8d5a3', fontFamily:"Georgia,'Times New Roman',serif" }}>
@@ -201,8 +199,6 @@ export default function HomePage() {
               <button onClick={signOut} style={{ background:'transparent', border:'1px solid rgba(201,168,76,0.2)', borderRadius:8, color:'rgba(201,168,76,0.5)', padding:'5px 10px', fontSize:11, cursor:'pointer' }}>Выйти</button>
             </div>
           </div>
-
-          {/* Stats row */}
           {profile && (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
               {[['👑',profile.wins,'Победы'],['🔥',profile.streak,'Серия'],['💀',profile.losses,'Потери'],['⭐',profile.mmr,'MMR']].map(([icon,val,lbl])=>(
@@ -215,27 +211,15 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Tabs */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:14 }}>
-          {([['rooms','🎮 Комнаты'],['create','➕ Создать']] as const).map(([tab,lbl])=>(
-            <button key={tab} onClick={()=>setActiveTab(tab)} style={{ padding:'12px', borderRadius:14, cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight:600, border:`1.5px solid ${activeTab===tab?GOLD:GOLD_DIM+'33'}`, background:activeTab===tab?'linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))':'rgba(255,255,255,0.02)', color:activeTab===tab?GOLD:'#5a4020', transition:'all 0.18s' }}>
-              {lbl}
-            </button>
-          ))}
-        </div>
-
         {/* ROOMS TAB */}
         {activeTab==='rooms' && (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {/* Search + filter */}
             <input style={inp} placeholder="🔍  Поиск по названию…" value={search} onChange={e=>setSearch(e.target.value)}/>
             <div style={{ display:'flex', gap:6 }}>
               {([['all','Все'],['team','2×2'],['solo','Solo']] as const).map(([f,lbl])=>(
                 <button key={f} onClick={()=>setModeFilter(f)} style={{ flex:1, padding:'9px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, border:`1px solid ${modeFilter===f?GOLD:GOLD_DIM+'33'}`, background:modeFilter===f?'linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))':'rgba(255,255,255,0.02)', color:modeFilter===f?GOLD:'#5a4020', transition:'all 0.15s' }}>{lbl}</button>
               ))}
             </div>
-
-            {/* Room list */}
             {filtered.length===0 ? (
               <div style={{ textAlign:'center', color:'rgba(201,168,76,0.25)', fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
                 {rooms.length===0?'Пока нет комнат — создай первую! ➕':'Нет подходящих комнат'}
@@ -251,7 +235,6 @@ export default function HomePage() {
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
                     <span style={badge(GOLD)}>{room.mode==='team'?'2×2':'Solo'}</span>
                     <span style={badge('rgba(200,200,200,0.5)')}>{room.player_count}/{room.max_players} 👤</span>
-                    {/* Fill bar */}
                     <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                       <div style={{ width:40, height:3, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
                         <div style={{ height:'100%', width:`${(room.player_count/room.max_players)*100}%`, background:GOLD, borderRadius:2 }}/>
@@ -290,8 +273,6 @@ export default function HomePage() {
                 </button>
               </div>
             </div>
-
-            {/* Rules */}
             <div style={{ ...panel(), padding:'16px' }}>
               <div style={{ fontSize:11, color:'rgba(201,168,76,0.45)', letterSpacing:2, marginBottom:10 }}>ПРАВИЛА</div>
               <div style={{ fontSize:12, color:'rgba(201,168,76,0.55)', lineHeight:2 }}>
@@ -305,12 +286,95 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        {/* LEADERS TAB */}
+        {activeTab==='leaders' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+
+            {/* My rank */}
+            {profile && myRank >= 0 && (
+              <div style={{ ...panel({border:`1px solid ${GOLD}44`}), padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ fontSize:22, width:36, textAlign:'center' }}>{myRank<3?medalEmoji(myRank):`#${myRank+1}`}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:GOLD }}>{profile.username} <span style={{ fontSize:11, color:'rgba(201,168,76,0.5)' }}>(вы)</span></div>
+                  <div style={{ fontSize:11, color:'rgba(201,168,76,0.5)', marginTop:2 }}>
+                    {profile.wins} побед · {profile.streak} серия
+                  </div>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontSize:20, fontWeight:700, color:GOLD }}>{profile.mmr}</div>
+                  <div style={{ fontSize:10, color:'rgba(201,168,76,0.4)' }}>MMR</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ height:1, background:`linear-gradient(90deg,transparent,${GOLD_DIM},transparent)` }}/>
+
+            {/* Top 3 podium */}
+            {leaders.length >= 3 && (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1.2fr 1fr', gap:8, marginBottom:4 }}>
+                {/* 2nd */}
+                <div style={{ ...panel({border:'1px solid rgba(201,168,76,0.15)'}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
+                  <div style={{ fontSize:24 }}>🥈</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:'#e8d5a3', marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[1]?.username}</div>
+                  <div style={{ fontSize:16, fontWeight:700, color:'#c0c0c0', marginTop:4 }}>{leaders[1]?.mmr}</div>
+                </div>
+                {/* 1st */}
+                <div style={{ ...panel({border:`1px solid ${GOLD}55`, background:'rgba(201,168,76,0.08)'}), padding:'20px 8px', textAlign:'center' }}>
+                  <div style={{ fontSize:30 }}>🥇</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:GOLD, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[0]?.username}</div>
+                  <div style={{ fontSize:20, fontWeight:700, color:GOLD, marginTop:4 }}>{leaders[0]?.mmr}</div>
+                  <div style={{ fontSize:9, color:'rgba(201,168,76,0.5)', marginTop:2 }}>MMR</div>
+                </div>
+                {/* 3rd */}
+                <div style={{ ...panel({border:'1px solid rgba(201,168,76,0.15)'}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
+                  <div style={{ fontSize:24 }}>🥉</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:'#e8d5a3', marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[2]?.username}</div>
+                  <div style={{ fontSize:16, fontWeight:700, color:'#cd7f32', marginTop:4 }}>{leaders[2]?.mmr}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Full list */}
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {leaders.map((player, i) => {
+                const isMe = player.id === profile?.id
+                return (
+                  <motion.div key={player.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:i*0.03}}
+                    style={{ ...panel({border:`1px solid ${isMe?GOLD+'44':'rgba(201,168,76,0.08)'}`}), padding:'10px 14px', display:'flex', alignItems:'center', gap:12, background:isMe?'rgba(201,168,76,0.06)':undefined }}>
+                    <div style={{ fontSize:i<3?20:13, width:32, textAlign:'center', color:i<3?undefined:'rgba(201,168,76,0.4)', fontWeight:600 }}>
+                      {i<3 ? medalEmoji(i) : `#${i+1}`}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:isMe?700:500, color:isMe?GOLD:'#e8d5a3', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {player.username}{isMe?' 👈':''}
+                      </div>
+                      <div style={{ fontSize:10, color:'rgba(201,168,76,0.4)', marginTop:1 }}>
+                        {player.wins}W · {player.losses}L · {player.streak}🔥
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <div style={{ fontSize:16, fontWeight:700, color:i===0?GOLD:i===1?'#c0c0c0':i===2?'#cd7f32':'#e8d5a3' }}>{player.mmr}</div>
+                      <div style={{ fontSize:9, color:'rgba(201,168,76,0.3)' }}>MMR</div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            {leaders.length === 0 && (
+              <div style={{ textAlign:'center', color:'rgba(201,168,76,0.25)', fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
+                Пока никого нет — сыграй первым! 🎴
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Bottom tab bar */}
-      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:600, background:'rgba(8,4,1,0.95)', borderTop:`1px solid rgba(201,168,76,0.15)`, backdropFilter:'blur(12px)', zIndex:50, display:'grid', gridTemplateColumns:'1fr 1fr', padding:'8px 12px 12px', gap:8 }}>
-        {([['rooms','🎮','Комнаты'],['create','➕','Создать']] as const).map(([tab,icon,lbl])=>(
-          <button key={tab} onClick={()=>setActiveTab(tab)} style={{ padding:'10px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', border:'none', background:activeTab===tab?'linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))':'transparent', color:activeTab===tab?GOLD:'rgba(201,168,76,0.35)', transition:'all 0.18s', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+      {/* Bottom nav */}
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:600, background:'rgba(8,4,1,0.95)', borderTop:`1px solid rgba(201,168,76,0.15)`, backdropFilter:'blur(12px)', zIndex:50, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', padding:'8px 12px 12px', gap:8 }}>
+        {([['rooms','🎮','Комнаты'],['create','➕','Создать'],['leaders','🏆','Рейтинг']] as const).map(([tab,icon,lbl])=>(
+          <button key={tab} onClick={()=>{ setActiveTab(tab); if(tab==='leaders') loadLeaders() }} style={{ padding:'10px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', border:'none', background:activeTab===tab?'linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))':'transparent', color:activeTab===tab?GOLD:'rgba(201,168,76,0.35)', transition:'all 0.18s', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
             <span style={{ fontSize:18 }}>{icon}</span>
             <span style={{ fontSize:10, fontWeight:activeTab===tab?700:400 }}>{lbl}</span>
           </button>
@@ -322,6 +386,8 @@ export default function HomePage() {
           {toast}
         </div>
       )}
+
+      <style>{`@keyframes smokeRise{0%{transform:translateY(0) scale(1);opacity:0}20%{opacity:1}100%{transform:translateY(-80vh) scale(3);opacity:0}}`}</style>
     </div>
   )
 }
