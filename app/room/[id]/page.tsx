@@ -49,18 +49,35 @@ export default function RoomPage() {
   const canAddBot = isHost && totalCount < maxP
 
   useEffect(()=>{
-    supabase.auth.getUser().then(({data})=>{
+    supabase.auth.getUser().then(async ({data})=>{
       if (!data.user) {
-        // Save current room URL so we can return after login
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('returnUrl', window.location.pathname)
         }
         router.push('/auth'); return
       }
-      setMyId(data.user.id)
-      supabase.from('profiles').select('username').eq('id',data.user.id).single().then(({data:p})=>{
+      const uid = data.user.id
+      setMyId(uid)
+      supabase.from('profiles').select('username').eq('id',uid).single().then(({data:p})=>{
         if (p) setMyUsername(p.username)
       })
+
+      // Auto-join if not already in room
+      const { data: existing } = await supabase.from('room_players').select('seat').eq('room_id',roomId).eq('player_id',uid).single()
+      if (!existing) {
+        const { data: roomData } = await supabase.from('rooms').select('*').eq('id',roomId).single()
+        if (roomData && roomData.status === 'waiting') {
+          const { data: allPlayers } = await supabase.from('room_players').select('seat').eq('room_id',roomId)
+          const takenSeats = (allPlayers||[]).map((p:any)=>p.seat)
+          const maxP = roomData.max_players || 4
+          const freeSeat = [0,1,2,3,4,5].slice(0,maxP).find(s=>!takenSeats.includes(s))
+          if (freeSeat !== undefined) {
+            await supabase.from('room_players').insert({ room_id:roomId, player_id:uid, seat:freeSeat, is_ready:false })
+            await supabase.from('rooms').update({ player_count: takenSeats.length+1 }).eq('id',roomId)
+          }
+        }
+      }
+
       loadRoom()
       loadPlayers()
       loadMessages()
