@@ -125,8 +125,10 @@ export default function HomePage() {
     return m&&s
   })
 
+  const [activeTab, setActiveTab] = useState<'rooms'|'create'>('rooms')
+
   return (
-    <div style={{ minHeight:'100vh', padding:'16px', paddingBottom:32, position:'relative', color:'#e8d5a3', fontFamily:"Georgia,'Times New Roman',serif" }}>
+    <div style={{ minHeight:'100vh', maxWidth:600, margin:'0 auto', padding:'12px 12px 80px', position:'relative', color:'#e8d5a3', fontFamily:"Georgia,'Times New Roman',serif" }}>
       <Smoke/>
 
       {/* Password modal */}
@@ -136,7 +138,7 @@ export default function HomePage() {
             style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(0,0,0,0.75)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
             onClick={e=>{ if(e.target===e.currentTarget) setPendingRoom(null) }}>
             <motion.div initial={{scale:0.85,y:20}} animate={{scale:1,y:0}}
-              style={{ ...panel(), padding:'28px 24px', width:'100%', maxWidth:360, border:`1px solid ${GOLD}44` }}>
+              style={{ ...panel(), padding:'24px 20px', width:'100%', maxWidth:360, border:`1px solid ${GOLD}44` }}>
               <div style={{ fontSize:11, color:'rgba(201,168,76,0.45)', letterSpacing:2, marginBottom:6 }}>ВХОД В КОМНАТУ</div>
               <div style={{ fontSize:17, fontWeight:700, color:GOLD, marginBottom:16 }}>{pendingRoom.name}</div>
               <div style={{ fontSize:12, color:'rgba(201,168,76,0.5)', marginBottom:10 }}>🔒 Комната защищена паролем</div>
@@ -153,119 +155,138 @@ export default function HomePage() {
         )}
       </AnimatePresence>
 
-      <div style={{ maxWidth:960, margin:'0 auto', position:'relative', zIndex:1 }}>
+      <div style={{ position:'relative', zIndex:1 }}>
 
         {/* Header */}
-        <div style={{ ...panel(), padding:'12px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-            <div style={{ fontSize:22, fontWeight:700, letterSpacing:6, background:`linear-gradient(180deg,#f5e070,${GOLD})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
-            <div style={{ fontSize:9, color:'rgba(201,168,76,0.35)', letterSpacing:2 }}>by Milakhin Studio</div>
+        <div style={{ ...panel(), padding:'12px 16px', marginBottom:14 }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ fontSize:20, fontWeight:700, letterSpacing:5, background:`linear-gradient(180deg,#f5e070,${GOLD})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
+              <div style={{ fontSize:8, color:'rgba(201,168,76,0.3)', letterSpacing:1 }}>by Milakhin Studio</div>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              {profile && <div style={{ fontSize:13, color:GOLD, fontWeight:600 }}>{profile.username}</div>}
+              <button onClick={signOut} style={{ background:'transparent', border:'1px solid rgba(201,168,76,0.2)', borderRadius:8, color:'rgba(201,168,76,0.5)', padding:'5px 10px', fontSize:11, cursor:'pointer' }}>Выйти</button>
+            </div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:20 }}>
-            {profile && <>
+
+          {/* Stats row */}
+          {profile && (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
               {[['👑',profile.wins,'Победы'],['🔥',profile.streak,'Серия'],['💀',profile.losses,'Потери'],['⭐',profile.mmr,'MMR']].map(([icon,val,lbl])=>(
-                <div key={String(lbl)} style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)' }}>{icon} {lbl}</div>
-                  <div style={{ fontSize:15, fontWeight:700, color:GOLD }}>{val}</div>
+                <div key={String(lbl)} style={{ ...panel({border:'1px solid rgba(201,168,76,0.1)'}), padding:'8px 4px', textAlign:'center' }}>
+                  <div style={{ fontSize:8, color:'rgba(201,168,76,0.4)' }}>{icon} {lbl}</div>
+                  <div style={{ fontSize:16, fontWeight:700, color:GOLD, marginTop:2 }}>{val}</div>
                 </div>
               ))}
-              <div style={{ width:1, height:32, background:'rgba(201,168,76,0.15)' }}/>
-              <div style={{ fontSize:13, color:GOLD, fontWeight:600 }}>{profile.username}</div>
-              <button onClick={signOut} style={{ background:'transparent', border:'1px solid rgba(201,168,76,0.2)', borderRadius:8, color:'rgba(201,168,76,0.5)', padding:'6px 12px', fontSize:11, cursor:'pointer' }}>Выйти</button>
-            </>}
-          </div>
+            </div>
+          )}
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'300px 1fr', gap:16 }}>
+        {/* Tabs */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:14 }}>
+          {([['rooms','🎮 Комнаты'],['create','➕ Создать']] as const).map(([tab,lbl])=>(
+            <button key={tab} onClick={()=>setActiveTab(tab)} style={{ padding:'12px', borderRadius:14, cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight:600, border:`1.5px solid ${activeTab===tab?GOLD:GOLD_DIM+'33'}`, background:activeTab===tab?'linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))':'rgba(255,255,255,0.02)', color:activeTab===tab?GOLD:'#5a4020', transition:'all 0.18s' }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
 
-          {/* Left */}
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {/* Create */}
-            <div style={{ ...panel(), padding:'20px 18px' }}>
-              <div style={{ fontSize:11, color:'rgba(201,168,76,0.5)', letterSpacing:2, marginBottom:14 }}>СОЗДАТЬ КОМНАТУ</div>
+        {/* ROOMS TAB */}
+        {activeTab==='rooms' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {/* Search + filter */}
+            <input style={inp} placeholder="🔍  Поиск по названию…" value={search} onChange={e=>setSearch(e.target.value)}/>
+            <div style={{ display:'flex', gap:6 }}>
+              {([['all','Все'],['team','2×2'],['solo','Solo']] as const).map(([f,lbl])=>(
+                <button key={f} onClick={()=>setModeFilter(f)} style={{ flex:1, padding:'9px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, border:`1px solid ${modeFilter===f?GOLD:GOLD_DIM+'33'}`, background:modeFilter===f?'linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))':'rgba(255,255,255,0.02)', color:modeFilter===f?GOLD:'#5a4020', transition:'all 0.15s' }}>{lbl}</button>
+              ))}
+            </div>
+
+            {/* Room list */}
+            {filtered.length===0 ? (
+              <div style={{ textAlign:'center', color:'rgba(201,168,76,0.25)', fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
+                {rooms.length===0?'Пока нет комнат — создай первую! ➕':'Нет подходящих комнат'}
+              </div>
+            ) : filtered.map(room=>(
+              <motion.div key={room.id} whileHover={{scale:1.01}}
+                style={{ ...panel({border:'1px solid rgba(201,168,76,0.12)'}), padding:'14px 14px', display:'flex', alignItems:'center', gap:12 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:'#e8d5a3', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
+                    {room.password && <span>🔒</span>}
+                  </div>
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+                    <span style={badge(GOLD)}>{room.mode==='team'?'2×2':'Solo'}</span>
+                    <span style={badge('rgba(200,200,200,0.5)')}>{room.player_count}/{room.max_players} 👤</span>
+                    {/* Fill bar */}
+                    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                      <div style={{ width:40, height:3, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
+                        <div style={{ height:'100%', width:`${(room.player_count/room.max_players)*100}%`, background:GOLD, borderRadius:2 }}/>
+                      </div>
+                      <span style={{ fontSize:10, color:GOLD }}>{room.max_players-room.player_count} св.</span>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={()=>joinRoom(room)} disabled={room.player_count>=room.max_players}
+                  style={gbtn(room.player_count<room.max_players,{padding:'10px 16px',fontSize:13,flexShrink:0} as any)}>
+                  {room.player_count>=room.max_players?'Полная':'Войти'}
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* CREATE TAB */}
+        {activeTab==='create' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            <div style={{ ...panel(), padding:'20px 16px' }}>
+              <div style={{ fontSize:11, color:'rgba(201,168,76,0.5)', letterSpacing:2, marginBottom:14 }}>НОВАЯ КОМНАТА</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 <input style={inp} placeholder="Название комнаты" value={roomName} onChange={e=>setRoomName(e.target.value)} autoComplete="off"/>
                 <input style={inp} placeholder="Пароль (необязательно)" type="password" value={roomPass} onChange={e=>setRoomPass(e.target.value)} autoComplete="new-password"/>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                   {([['team','2 × 2','4 игрока'],['solo','Сам за себя','до 6']] as const).map(([mode,title,sub])=>(
-                    <button key={mode} onClick={()=>setGameMode(mode)} style={{ padding:'10px 6px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border:`1.5px solid ${gameMode===mode?GOLD:GOLD_DIM+'33'}`, background:gameMode===mode?'linear-gradient(135deg,rgba(201,168,76,0.14),rgba(201,168,76,0.04))':'rgba(255,255,255,0.02)', color:gameMode===mode?GOLD:'#5a4020', transition:'all 0.18s' }}>
-                      <div style={{fontSize:12,fontWeight:700}}>{title}</div>
+                    <button key={mode} onClick={()=>setGameMode(mode)} style={{ padding:'14px 6px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border:`1.5px solid ${gameMode===mode?GOLD:GOLD_DIM+'33'}`, background:gameMode===mode?'linear-gradient(135deg,rgba(201,168,76,0.14),rgba(201,168,76,0.04))':'rgba(255,255,255,0.02)', color:gameMode===mode?GOLD:'#5a4020', transition:'all 0.18s' }}>
+                      <div style={{fontSize:14,fontWeight:700}}>{title}</div>
                       <div style={{fontSize:10,opacity:0.6,marginTop:2}}>{sub}</div>
                     </button>
                   ))}
                 </div>
-                <button onClick={createRoom} disabled={loading} style={gbtn(!loading,{width:'100%'} as any)}>
-                  {loading?'Создаём…':'Создать комнату'}
+                <button onClick={()=>{ createRoom(); setActiveTab('rooms') }} disabled={loading} style={gbtn(!loading,{padding:'14px',fontSize:15} as any)}>
+                  {loading?'Создаём…':'🎴 Создать комнату'}
                 </button>
               </div>
             </div>
 
             {/* Rules */}
-            <div style={{ ...panel(), padding:'16px 18px' }}>
+            <div style={{ ...panel(), padding:'16px' }}>
               <div style={{ fontSize:11, color:'rgba(201,168,76,0.45)', letterSpacing:2, marginBottom:10 }}>ПРАВИЛА</div>
-              <div style={{ fontSize:11, color:'rgba(201,168,76,0.5)', lineHeight:2 }}>
+              <div style={{ fontSize:12, color:'rgba(201,168,76,0.55)', lineHeight:2 }}>
                 Сила: 4–A · 2 · 3 · 🃏Чёрный · 🃏Красный<br/>
-                Тройка бьёт одиночку / пару / стрит<br/>
+                Тройка бьёт одиночку / пару / стрит / ашлян<br/>
                 Каре бьёт всё<br/>
+                Ашлян — 3+ пары подряд (5-5/6-6/7-7)<br/>
                 ✦ Wild — заменяет любую карту<br/>
                 4♠ последней на 1 соперника = +2 очка
               </div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Right: rooms */}
-          <div style={{ ...panel(), padding:'18px 16px', display:'flex', flexDirection:'column', gap:12 }}>
-            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-              <input style={{...inp,flex:1}} placeholder="🔍  Поиск по названию…" value={search} onChange={e=>setSearch(e.target.value)}/>
-              <div style={{ display:'flex', gap:6 }}>
-                {([['all','Все'],['team','2×2'],['solo','Solo']] as const).map(([f,lbl])=>(
-                  <button key={f} onClick={()=>setModeFilter(f)} style={{ padding:'8px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, border:`1px solid ${modeFilter===f?GOLD:GOLD_DIM+'33'}`, background:modeFilter===f?'linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06))':'rgba(255,255,255,0.02)', color:modeFilter===f?GOLD:'#5a4020', transition:'all 0.15s' }}>{lbl}</button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ height:1, background:`linear-gradient(90deg,transparent,${GOLD_DIM},transparent)` }}/>
-
-            <div style={{ display:'flex', flexDirection:'column', gap:8, overflowY:'auto', maxHeight:500 }}>
-              {filtered.length===0 && (
-                <div style={{ textAlign:'center', color:'rgba(201,168,76,0.25)', fontSize:13, padding:'60px 0', fontStyle:'italic' }}>
-                  {rooms.length===0?'Пока нет комнат — создай первую!':'Нет подходящих комнат'}
-                </div>
-              )}
-              {filtered.map(room=>(
-                <motion.div key={room.id} whileHover={{scale:1.005}}
-                  style={{ ...panel({border:'1px solid rgba(201,168,76,0.12)'}), padding:'14px 16px', display:'flex', alignItems:'center', gap:14 }}>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                      <div style={{ fontSize:14, fontWeight:600, color:'#e8d5a3', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
-                      {room.password && <span style={{ fontSize:12 }}>🔒</span>}
-                    </div>
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                      <span style={badge(GOLD)}>{room.mode==='team'?'2 × 2':'Solo'}</span>
-                      <span style={badge('rgba(200,200,200,0.6)')}>{room.player_count}/{room.max_players} игроков</span>
-                      {room.password && <span style={badge('#c08040')}>Закрытая</span>}
-                    </div>
-                  </div>
-                  <div style={{ width:60, textAlign:'center' }}>
-                    <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', marginBottom:4 }}>МЕСТА</div>
-                    <div style={{ height:4, background:'rgba(255,255,255,0.06)', borderRadius:2, overflow:'hidden' }}>
-                      <div style={{ height:'100%', width:`${(room.player_count/room.max_players)*100}%`, background:GOLD, borderRadius:2 }}/>
-                    </div>
-                    <div style={{ fontSize:10, color:GOLD, marginTop:3 }}>{room.max_players-room.player_count} св.</div>
-                  </div>
-                  <button onClick={()=>joinRoom(room)} disabled={room.player_count>=room.max_players}
-                    style={gbtn(room.player_count<room.max_players,{padding:'9px 18px',fontSize:13} as any)}>
-                    {room.player_count>=room.max_players?'Полная':'Войти'}
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* Bottom tab bar */}
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:600, background:'rgba(8,4,1,0.95)', borderTop:`1px solid rgba(201,168,76,0.15)`, backdropFilter:'blur(12px)', zIndex:50, display:'grid', gridTemplateColumns:'1fr 1fr', padding:'8px 12px 12px', gap:8 }}>
+        {([['rooms','🎮','Комнаты'],['create','➕','Создать']] as const).map(([tab,icon,lbl])=>(
+          <button key={tab} onClick={()=>setActiveTab(tab)} style={{ padding:'10px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', border:'none', background:activeTab===tab?'linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))':'transparent', color:activeTab===tab?GOLD:'rgba(201,168,76,0.35)', transition:'all 0.18s', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+            <span style={{ fontSize:18 }}>{icon}</span>
+            <span style={{ fontSize:10, fontWeight:activeTab===tab?700:400 }}>{lbl}</span>
+          </button>
+        ))}
       </div>
 
       {toast && (
-        <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#2d1a00,#6b4f0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, boxShadow:`0 0 24px ${GOLD_GLOW}`, whiteSpace:'nowrap', animation:'popIn 0.2s ease' }}>
+        <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#2d1a00,#6b4f0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, boxShadow:`0 0 24px ${GOLD_GLOW}`, whiteSpace:'nowrap' }}>
           {toast}
         </div>
       )}
