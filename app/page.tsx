@@ -249,23 +249,28 @@ export default function HomePage() {
       <div style={{ position:'relative', zIndex:1 }}>
 
         {/* Header */}
-        <div style={{ ...panel(), padding:'12px 16px', marginBottom:14 }}>
+        <div style={{ ...panel(), padding:'10px 14px', marginBottom:12 }}>
+          {/* Top row: logo + user + logout */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ fontSize:22, fontWeight:700, letterSpacing:5, background:`linear-gradient(180deg,#f5e070,${T.gold})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
-              <div style={{ fontSize:17, color:`${T.gold}55`, letterSpacing:1 }}>by Milakhin Studio</div>
+            {/* Logo */}
+            <div style={{ display:'flex', flexDirection:'column', justifyContent:'center' }}>
+              <div style={{ fontSize:20, fontWeight:700, letterSpacing:5, lineHeight:1.1, background:`linear-gradient(180deg,#f5e070,${T.gold})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
+              <div style={{ fontSize:10, color:`${T.gold}44`, letterSpacing:1, marginTop:1 }}>by Milakhin Studio</div>
             </div>
+            {/* Right: username + logout */}
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              {profile && <div style={{ fontSize:17, color:T.gold, fontWeight:600 }}>{profile.username}</div>}
-              <button onClick={signOut} style={{ background:'transparent', border:`1px solid ${T.goldDim}44`, borderRadius:8, color:`${T.gold}66`, padding:'5px 10px', fontSize:17, cursor:'pointer' }}>Выйти</button>
+              {profile && <div style={{ fontSize:14, color:T.gold, fontWeight:600 }}>{profile.username}</div>}
+              <button onClick={signOut} style={{ background:'transparent', border:`1px solid ${T.goldDim}44`, borderRadius:8, color:`${T.gold}55`, padding:'4px 10px', fontSize:12, cursor:'pointer' }}>Выйти</button>
             </div>
           </div>
+          {/* Stats row */}
           {profile && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
-              {[['👑',profile.wins,'Победы'],['🔥',profile.streak,'Серия'],['💀',profile.losses,'Потери'],['⭐',profile.mmr,'MMR']].map(([icon,val,lbl])=>(
-                <div key={String(lbl)} style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'8px 4px', textAlign:'center' }}>
-                  <div style={{ fontSize:17, color:`${T.gold}66` }}>{icon} {lbl}</div>
-                  <div style={{ fontSize:16, fontWeight:700, color:T.gold, marginTop:2 }}>{val}</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:5 }}>
+              {([['👑', profile.wins, 'Победы'], ['🔥', profile.streak, 'Серия'], ['💀', profile.losses, 'Потери'], ['⭐', profile.mmr, 'MMR']] as const).map(([icon, val, lbl])=>(
+                <div key={lbl} style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'7px 4px', textAlign:'center' }}>
+                  <div style={{ fontSize:16 }}>{icon}</div>
+                  <div style={{ fontSize:11, color:`${T.gold}66`, marginTop:2 }}>{lbl}</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:T.gold, marginTop:1 }}>{val}</div>
                 </div>
               ))}
             </div>
