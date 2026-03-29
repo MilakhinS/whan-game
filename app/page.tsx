@@ -29,9 +29,9 @@ export default function HomePage() {
   const T = THEMES[themeName]
 
   const panel = (extra={}) => ({ background:T.panel, border:`1px solid ${T.panelBorder}`, borderRadius:20, backdropFilter:'blur(12px)', ...extra } as any)
-  const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?T.gold:T.goldDim+'44'}`, background:active?`linear-gradient(135deg,${T.goldDim}88,${T.goldDim}cc,${T.goldDim}88)`:'rgba(255,255,255,0.03)', color:active?T.text:T.goldDim, cursor:active?'pointer':'not-allowed', fontSize:14, fontWeight:600, boxShadow:active?`0 2px 16px ${T.goldGlow}`:'none', transition:'all 0.18s', ...extra } as any)
-  const inp = { background:'rgba(255,255,255,0.04)', border:`1px solid ${T.goldDim}55`, borderRadius:12, padding:'10px 14px', color:T.text, fontSize:14, outline:'none', width:'100%', boxSizing:'border-box' as const, fontFamily:'inherit' }
-  const badge = (color=T.gold) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, border:`1px solid ${color}44`, background:`${color}18`, color, fontSize:11, fontWeight:600 })
+  const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?T.gold:T.goldDim+'44'}`, background:active?`linear-gradient(135deg,${T.goldDim}88,${T.goldDim}cc,${T.goldDim}88)`:'rgba(255,255,255,0.03)', color:active?T.text:T.goldDim, cursor:active?'pointer':'not-allowed', fontSize:18, fontWeight:600, boxShadow:active?`0 2px 16px ${T.goldGlow}`:'none', transition:'all 0.18s', ...extra } as any)
+  const inp = { background:'rgba(255,255,255,0.04)', border:`1px solid ${T.goldDim}55`, borderRadius:12, padding:'10px 14px', color:T.text, fontSize:18, outline:'none', width:'100%', boxSizing:'border-box' as const, fontFamily:'inherit' }
+  const badge = (color=T.gold) => ({ display:'inline-block', padding:'2px 10px', borderRadius:20, border:`1px solid ${color}44`, background:`${color}18`, color, fontSize:19, fontWeight:600 })
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(()=>setToast(''),2500) }
 
@@ -233,10 +233,10 @@ export default function HomePage() {
             onClick={e=>{ if(e.target===e.currentTarget) setPendingRoom(null) }}>
             <motion.div initial={{scale:0.85,y:20}} animate={{scale:1,y:0}}
               style={{ ...panel(), padding:'24px 20px', width:'100%', maxWidth:360, border:`1px solid ${T.gold}44` }}>
-              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:6 }}>ВХОД В КОМНАТУ</div>
-              <div style={{ fontSize:17, fontWeight:700, color:T.gold, marginBottom:16 }}>{pendingRoom.name}</div>
+              <div style={{ fontSize:19, color:`${T.gold}88`, letterSpacing:2, marginBottom:6 }}>ВХОД В КОМНАТУ</div>
+              <div style={{ fontSize:19, fontWeight:700, color:T.gold, marginBottom:16 }}>{pendingRoom.name}</div>
               <input style={{...inp,marginBottom:8}} placeholder="Введите пароль" type="password" value={enterPass} onChange={e=>{setEnterPass(e.target.value);setPassError('')}} onKeyDown={e=>e.key==='Enter'&&doJoin(pendingRoom,enterPass)} autoFocus/>
-              {passError && <div style={{ fontSize:12, color:'#e74c3c', marginBottom:10 }}>{passError}</div>}
+              {passError && <div style={{ fontSize:18, color:'#e74c3c', marginBottom:10 }}>{passError}</div>}
               <div style={{ display:'flex', gap:8 }}>
                 <button onClick={()=>setPendingRoom(null)} style={gbtn(false,{flex:1,cursor:'pointer'})}>Отмена</button>
                 <button onClick={()=>doJoin(pendingRoom,enterPass)} style={gbtn(true,{flex:2})}>Войти</button>
@@ -252,20 +252,20 @@ export default function HomePage() {
         <div style={{ ...panel(), padding:'12px 16px', marginBottom:14 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ fontSize:20, fontWeight:700, letterSpacing:5, background:`linear-gradient(180deg,#f5e070,${T.gold})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
-              <div style={{ fontSize:8, color:`${T.gold}55`, letterSpacing:1 }}>by Milakhin Studio</div>
+              <div style={{ fontSize:24, fontWeight:700, letterSpacing:5, background:`linear-gradient(180deg,#f5e070,${T.gold})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>WHAN</div>
+              <div style={{ fontSize:19, color:`${T.gold}55`, letterSpacing:1 }}>by Milakhin Studio</div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              {profile && <div style={{ fontSize:13, color:T.gold, fontWeight:600 }}>{profile.username}</div>}
-              <button onClick={signOut} style={{ background:'transparent', border:`1px solid ${T.goldDim}44`, borderRadius:8, color:`${T.gold}66`, padding:'5px 10px', fontSize:11, cursor:'pointer' }}>Выйти</button>
+              {profile && <div style={{ fontSize:19, color:T.gold, fontWeight:600 }}>{profile.username}</div>}
+              <button onClick={signOut} style={{ background:'transparent', border:`1px solid ${T.goldDim}44`, borderRadius:8, color:`${T.gold}66`, padding:'5px 10px', fontSize:19, cursor:'pointer' }}>Выйти</button>
             </div>
           </div>
           {profile && (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
               {[['👑',profile.wins,'Победы'],['🔥',profile.streak,'Серия'],['💀',profile.losses,'Потери'],['⭐',profile.mmr,'MMR']].map(([icon,val,lbl])=>(
                 <div key={String(lbl)} style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'8px 4px', textAlign:'center' }}>
-                  <div style={{ fontSize:8, color:`${T.gold}66` }}>{icon} {lbl}</div>
-                  <div style={{ fontSize:16, fontWeight:700, color:T.gold, marginTop:2 }}>{val}</div>
+                  <div style={{ fontSize:19, color:`${T.gold}66` }}>{icon} {lbl}</div>
+                  <div style={{ fontSize:18, fontWeight:700, color:T.gold, marginTop:2 }}>{val}</div>
                 </div>
               ))}
             </div>
@@ -278,14 +278,14 @@ export default function HomePage() {
             <input style={inp} placeholder="🔍  Поиск…" value={search} onChange={e=>setSearch(e.target.value)}/>
             <div style={{ display:'flex', gap:6 }}>
               {([['all','Все'],['team','2×2'],['solo','Solo']] as const).map(([f,lbl])=>(
-                <button key={f} onClick={()=>setModeFilter(f)} style={{ flex:1, padding:'9px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, border:`1px solid ${modeFilter===f?T.gold:T.goldDim+'33'}`, background:modeFilter===f?`${T.gold}22`:'rgba(255,255,255,0.02)', color:modeFilter===f?T.gold:T.goldDim, transition:'all 0.15s' }}>{lbl}</button>
+                <button key={f} onClick={()=>setModeFilter(f)} style={{ flex:1, padding:'9px 6px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:18, border:`1px solid ${modeFilter===f?T.gold:T.goldDim+'33'}`, background:modeFilter===f?`${T.gold}22`:'rgba(255,255,255,0.02)', color:modeFilter===f?T.gold:T.goldDim, transition:'all 0.15s' }}>{lbl}</button>
               ))}
             </div>
 
             {/* Active games */}
             {activeGames.length > 0 && (
               <div>
-                <div style={{ fontSize:10, color:`${T.gold}66`, letterSpacing:2, marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ fontSize:18, color:`${T.gold}66`, letterSpacing:2, marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>
                   <div style={{ width:6, height:6, borderRadius:'50%', background:'#27ae60', boxShadow:'0 0 6px #27ae60' }}/>
                   ИДЁТ ИГРА
                 </div>
@@ -295,8 +295,8 @@ export default function HomePage() {
                       style={{ ...panel({border:`1px solid rgba(39,174,96,0.25)`}), padding:'12px 14px', display:'flex', alignItems:'center', gap:12, background:'rgba(39,174,96,0.04)' }}>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
-                          <div style={{ fontSize:13, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
-                          <span style={{ fontSize:9, color:'#27ae60', background:'rgba(39,174,96,0.15)', border:'1px solid rgba(39,174,96,0.3)', borderRadius:10, padding:'1px 6px' }}>В игре</span>
+                          <div style={{ fontSize:19, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
+                          <span style={{ fontSize:19, color:'#27ae60', background:'rgba(39,174,96,0.15)', border:'1px solid rgba(39,174,96,0.3)', borderRadius:10, padding:'1px 6px' }}>В игре</span>
                         </div>
                         <div style={{ display:'flex', gap:6, alignItems:'center' }}>
                           <span style={badge(T.gold)}>{room.mode==='team'?'2×2':'Solo'}</span>
@@ -304,7 +304,7 @@ export default function HomePage() {
                         </div>
                       </div>
                       <button onClick={()=>joinActiveGame(room)}
-                        style={{ padding:'8px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight:600, border:'1px solid rgba(39,174,96,0.4)', background:'rgba(39,174,96,0.12)', color:'#27ae60', flexShrink:0 }}>
+                        style={{ padding:'8px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:18, fontWeight:600, border:'1px solid rgba(39,174,96,0.4)', background:'rgba(39,174,96,0.12)', color:'#27ae60', flexShrink:0 }}>
                         Войти
                       </button>
                     </motion.div>
@@ -316,7 +316,7 @@ export default function HomePage() {
 
             {/* Waiting rooms */}
             {filtered.length===0 ? (
-              <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:13, padding:'40px 0', fontStyle:'italic' }}>
+              <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:19, padding:'40px 0', fontStyle:'italic' }}>
                 {rooms.length===0?'Пока нет комнат — создай! ➕':'Нет комнат'}
               </div>
             ) : filtered.map(room=>(
@@ -324,7 +324,7 @@ export default function HomePage() {
                 style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'14px', display:'flex', alignItems:'center', gap:12 }}>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
+                    <div style={{ fontSize:18, fontWeight:600, color:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{room.name}</div>
                     {room.password && <span>🔒</span>}
                   </div>
                   <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
@@ -335,7 +335,7 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-                <button onClick={()=>joinRoom(room)} disabled={room.player_count>=room.max_players} style={gbtn(room.player_count<room.max_players,{padding:'10px 16px',fontSize:13,flexShrink:0})}>
+                <button onClick={()=>joinRoom(room)} disabled={room.player_count>=room.max_players} style={gbtn(room.player_count<room.max_players,{padding:'10px 16px',fontSize:19,flexShrink:0})}>
                   {room.player_count>=room.max_players?'Полная':'Войти'}
                 </button>
               </motion.div>
@@ -347,26 +347,26 @@ export default function HomePage() {
         {activeTab==='create' && (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             <div style={{ ...panel(), padding:'20px 16px' }}>
-              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:14 }}>НОВАЯ КОМНАТА</div>
+              <div style={{ fontSize:19, color:`${T.gold}88`, letterSpacing:2, marginBottom:14 }}>НОВАЯ КОМНАТА</div>
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 <input style={inp} placeholder="Название комнаты" value={roomName} onChange={e=>setRoomName(e.target.value)} autoComplete="off"/>
                 <input style={inp} placeholder="Пароль (необязательно)" type="password" value={roomPass} onChange={e=>setRoomPass(e.target.value)} autoComplete="new-password"/>
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                   {([['team','2 × 2','4 игрока'],['solo','Сам за себя','до 6']] as const).map(([mode,title,sub])=>(
                     <button key={mode} onClick={()=>setGameMode(mode)} style={{ padding:'14px 6px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', textAlign:'center', border:`1.5px solid ${gameMode===mode?T.gold:T.goldDim+'33'}`, background:gameMode===mode?`${T.gold}18`:'rgba(255,255,255,0.02)', color:gameMode===mode?T.gold:T.goldDim, transition:'all 0.18s' }}>
-                      <div style={{fontSize:14,fontWeight:700}}>{title}</div>
-                      <div style={{fontSize:10,opacity:0.6,marginTop:2}}>{sub}</div>
+                      <div style={{fontSize:18,fontWeight:700}}>{title}</div>
+                      <div style={{fontSize:18,opacity:0.6,marginTop:2}}>{sub}</div>
                     </button>
                   ))}
                 </div>
-                <button onClick={createRoom} disabled={loading} style={gbtn(!loading,{padding:'14px',fontSize:15})}>
+                <button onClick={createRoom} disabled={loading} style={gbtn(!loading,{padding:'14px',fontSize:19})}>
                   {loading?'Создаём…':'🎴 Создать комнату'}
                 </button>
               </div>
             </div>
             <div style={{ ...panel(), padding:'16px' }}>
-              <div style={{ fontSize:11, color:`${T.gold}66`, letterSpacing:2, marginBottom:10 }}>ПРАВИЛА</div>
-              <div style={{ fontSize:12, color:`${T.gold}88`, lineHeight:2 }}>
+              <div style={{ fontSize:19, color:`${T.gold}66`, letterSpacing:2, marginBottom:10 }}>ПРАВИЛА</div>
+              <div style={{ fontSize:18, color:`${T.gold}88`, lineHeight:2 }}>
                 Сила: 4–A · 2 · 3 · 🃏Чёрный · 🃏Красный<br/>
                 Тройка бьёт одиночку / пару / стрит / ашлян<br/>
                 Каре бьёт всё · Ашлян — 3+ пары подряд<br/>
@@ -382,14 +382,14 @@ export default function HomePage() {
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {profile && myRank >= 0 && (
               <div style={{ ...panel({border:`1px solid ${T.gold}44`}), padding:'14px 16px', display:'flex', alignItems:'center', gap:12 }}>
-                <div style={{ fontSize:22, width:36, textAlign:'center' }}>{myRank<3?medalEmoji(myRank):`#${myRank+1}`}</div>
+                <div style={{ fontSize:24, width:36, textAlign:'center' }}>{myRank<3?medalEmoji(myRank):`#${myRank+1}`}</div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:T.gold }}>{profile.username} <span style={{ fontSize:11, color:`${T.gold}66` }}>(вы)</span></div>
-                  <div style={{ fontSize:11, color:`${T.gold}66`, marginTop:2 }}>{profile.wins} побед · {profile.streak} серия</div>
+                  <div style={{ fontSize:18, fontWeight:700, color:T.gold }}>{profile.username} <span style={{ fontSize:19, color:`${T.gold}66` }}>(вы)</span></div>
+                  <div style={{ fontSize:19, color:`${T.gold}66`, marginTop:2 }}>{profile.wins} побед · {profile.streak} серия</div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ fontSize:20, fontWeight:700, color:T.gold }}>{profile.mmr}</div>
-                  <div style={{ fontSize:10, color:`${T.gold}44` }}>MMR</div>
+                  <div style={{ fontSize:24, fontWeight:700, color:T.gold }}>{profile.mmr}</div>
+                  <div style={{ fontSize:18, color:`${T.gold}44` }}>MMR</div>
                 </div>
               </div>
             )}
@@ -398,18 +398,18 @@ export default function HomePage() {
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1.2fr 1fr', gap:8, marginBottom:4 }}>
                 <div style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
                   <div style={{ fontSize:24 }}>🥈</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:T.text, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[1]?.username}</div>
-                  <div style={{ fontSize:16, fontWeight:700, color:'#c0c0c0', marginTop:4 }}>{leaders[1]?.mmr}</div>
+                  <div style={{ fontSize:18, fontWeight:600, color:T.text, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[1]?.username}</div>
+                  <div style={{ fontSize:18, fontWeight:700, color:'#c0c0c0', marginTop:4 }}>{leaders[1]?.mmr}</div>
                 </div>
                 <div style={{ ...panel({border:`1px solid ${T.gold}55`, background:`${T.gold}11`}), padding:'20px 8px', textAlign:'center' }}>
                   <div style={{ fontSize:30 }}>🥇</div>
-                  <div style={{ fontSize:13, fontWeight:700, color:T.gold, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[0]?.username}</div>
-                  <div style={{ fontSize:20, fontWeight:700, color:T.gold, marginTop:4 }}>{leaders[0]?.mmr}</div>
+                  <div style={{ fontSize:19, fontWeight:700, color:T.gold, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[0]?.username}</div>
+                  <div style={{ fontSize:24, fontWeight:700, color:T.gold, marginTop:4 }}>{leaders[0]?.mmr}</div>
                 </div>
                 <div style={{ ...panel({border:`1px solid ${T.goldDim}33`}), padding:'14px 8px', textAlign:'center', alignSelf:'flex-end' }}>
                   <div style={{ fontSize:24 }}>🥉</div>
-                  <div style={{ fontSize:12, fontWeight:600, color:T.text, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[2]?.username}</div>
-                  <div style={{ fontSize:16, fontWeight:700, color:'#cd7f32', marginTop:4 }}>{leaders[2]?.mmr}</div>
+                  <div style={{ fontSize:18, fontWeight:600, color:T.text, marginTop:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{leaders[2]?.username}</div>
+                  <div style={{ fontSize:18, fontWeight:700, color:'#cd7f32', marginTop:4 }}>{leaders[2]?.mmr}</div>
                 </div>
               </div>
             )}
@@ -421,19 +421,19 @@ export default function HomePage() {
                     style={{ ...panel({border:`1px solid ${isMe?T.gold+'44':T.goldDim+'22'}`}), padding:'10px 14px', display:'flex', alignItems:'center', gap:12, background:isMe?`${T.gold}08`:undefined }}>
                     <div style={{ fontSize:i<3?20:13, width:32, textAlign:'center', color:i<3?undefined:`${T.gold}55`, fontWeight:600 }}>{i<3?medalEmoji(i):`#${i+1}`}</div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:isMe?700:500, color:isMe?T.gold:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      <div style={{ fontSize:19, fontWeight:isMe?700:500, color:isMe?T.gold:T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {player.username}{isMe?' 👈':''}
                       </div>
-                      <div style={{ fontSize:10, color:`${T.gold}55`, marginTop:1 }}>{player.wins}W · {player.losses}L · {player.streak}🔥</div>
+                      <div style={{ fontSize:18, color:`${T.gold}55`, marginTop:1 }}>{player.wins}W · {player.losses}L · {player.streak}🔥</div>
                     </div>
                     <div style={{ textAlign:'right', flexShrink:0 }}>
-                      <div style={{ fontSize:16, fontWeight:700, color:i===0?T.gold:i===1?'#c0c0c0':i===2?'#cd7f32':T.text }}>{player.mmr}</div>
-                      <div style={{ fontSize:9, color:`${T.gold}44` }}>MMR</div>
+                      <div style={{ fontSize:18, fontWeight:700, color:i===0?T.gold:i===1?'#c0c0c0':i===2?'#cd7f32':T.text }}>{player.mmr}</div>
+                      <div style={{ fontSize:19, color:`${T.gold}44` }}>MMR</div>
                     </div>
                   </motion.div>
                 )
               })}
-              {leaders.length===0 && <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:13, padding:'60px 0', fontStyle:'italic' }}>Сыграй первым! 🎴</div>}
+              {leaders.length===0 && <div style={{ textAlign:'center', color:`${T.gold}33`, fontSize:19, padding:'60px 0', fontStyle:'italic' }}>Сыграй первым! 🎴</div>}
             </div>
           </div>
         )}
@@ -448,19 +448,19 @@ export default function HomePage() {
                 {profile.username[0]?.toUpperCase()}
               </div>
               <div style={{ fontSize:18, fontWeight:700, color:T.gold }}>{profile.username}</div>
-              <div style={{ fontSize:11, color:`${T.gold}55`, marginTop:4 }}>MMR {profile.mmr}</div>
+              <div style={{ fontSize:19, color:`${T.gold}55`, marginTop:4 }}>MMR {profile.mmr}</div>
             </div>
 
             {/* Edit username */}
             <div style={{ ...panel(), padding:'18px 16px' }}>
-              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:12 }}>ИЗМЕНИТЬ НИКНЕЙМ</div>
+              <div style={{ fontSize:19, color:`${T.gold}88`, letterSpacing:2, marginBottom:12 }}>ИЗМЕНИТЬ НИКНЕЙМ</div>
               <input style={inp} placeholder="Новый никнейм" value={editUsername} onChange={e=>setEditUsername(e.target.value)} maxLength={20}/>
-              <div style={{ fontSize:10, color:`${T.gold}44`, marginTop:6 }}>{editUsername.length}/20 символов</div>
+              <div style={{ fontSize:18, color:`${T.gold}44`, marginTop:6 }}>{editUsername.length}/20 символов</div>
             </div>
 
             {/* Theme selector */}
             <div style={{ ...panel(), padding:'18px 16px' }}>
-              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:14 }}>ТЕМА ОФОРМЛЕНИЯ</div>
+              <div style={{ fontSize:19, color:`${T.gold}88`, letterSpacing:2, marginBottom:14 }}>ТЕМА ОФОРМЛЕНИЯ</div>
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {(Object.entries(THEMES) as [ThemeName, typeof THEMES[ThemeName]][]).map(([key, theme])=>(
                   <button key={key} onClick={()=>applyTheme(key)}
@@ -470,30 +470,30 @@ export default function HomePage() {
                       {theme.emoji}
                     </div>
                     <div>
-                      <div style={{ fontSize:14, fontWeight:600, color:theme.gold }}>{theme.name}</div>
-                      <div style={{ fontSize:11, color:`${theme.gold}66`, marginTop:2 }}>
+                      <div style={{ fontSize:18, fontWeight:600, color:theme.gold }}>{theme.name}</div>
+                      <div style={{ fontSize:19, color:`${theme.gold}66`, marginTop:2 }}>
                         {key==='hookah'?'Тёмный · Золотой':key==='midnight'?'Тёмный · Фиолетовый':'Тёмный · Нефритовый'}
                       </div>
                     </div>
-                    {themeName===key && <div style={{ marginLeft:'auto', fontSize:16, color:theme.gold }}>✓</div>}
+                    {themeName===key && <div style={{ marginLeft:'auto', fontSize:18, color:theme.gold }}>✓</div>}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Save button */}
-            <button onClick={saveProfile} disabled={savingProfile} style={gbtn(!savingProfile,{padding:'14px',fontSize:15,width:'100%'})}>
+            <button onClick={saveProfile} disabled={savingProfile} style={gbtn(!savingProfile,{padding:'14px',fontSize:19,width:'100%'})}>
               {savingProfile?'Сохраняем…':'💾 Сохранить'}
             </button>
 
             {/* Stats */}
             <div style={{ ...panel(), padding:'16px' }}>
-              <div style={{ fontSize:11, color:`${T.gold}88`, letterSpacing:2, marginBottom:12 }}>СТАТИСТИКА</div>
+              <div style={{ fontSize:19, color:`${T.gold}88`, letterSpacing:2, marginBottom:12 }}>СТАТИСТИКА</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                 {[['🏆 Победы',profile.wins],['💀 Поражения',profile.losses],['🔥 Серия',profile.streak],['⭐ MMR',profile.mmr]].map(([lbl,val])=>(
                   <div key={String(lbl)} style={{ background:'rgba(255,255,255,0.02)', border:`1px solid ${T.goldDim}33`, borderRadius:12, padding:'12px', textAlign:'center' }}>
-                    <div style={{ fontSize:12, color:`${T.gold}66` }}>{lbl}</div>
-                    <div style={{ fontSize:22, fontWeight:700, color:T.gold, marginTop:4 }}>{val}</div>
+                    <div style={{ fontSize:18, color:`${T.gold}66` }}>{lbl}</div>
+                    <div style={{ fontSize:24, fontWeight:700, color:T.gold, marginTop:4 }}>{val}</div>
                   </div>
                 ))}
               </div>
@@ -507,13 +507,13 @@ export default function HomePage() {
         {([['rooms','🎮','Комнаты'],['create','➕','Создать'],['leaders','🏆','Рейтинг'],['profile','👤','Профиль']] as const).map(([tab,icon,lbl])=>(
           <button key={tab} onClick={()=>{ setActiveTab(tab); if(tab==='leaders') loadLeaders() }} style={{ padding:'8px', borderRadius:12, cursor:'pointer', fontFamily:'inherit', border:'none', background:activeTab===tab?`${T.gold}22`:'transparent', color:activeTab===tab?T.gold:`${T.gold}44`, transition:'all 0.18s', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
             <span style={{ fontSize:18 }}>{icon}</span>
-            <span style={{ fontSize:9, fontWeight:activeTab===tab?700:400 }}>{lbl}</span>
+            <span style={{ fontSize:19, fontWeight:activeTab===tab?700:400 }}>{lbl}</span>
           </button>
         ))}
       </div>
 
       {toast && (
-        <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg,${T.goldDim}cc,${T.goldDim})`, color:T.text, borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${T.gold}`, boxShadow:`0 0 24px ${T.goldGlow}`, whiteSpace:'nowrap' }}>
+        <div style={{ position:'fixed', top:14, left:'50%', transform:'translateX(-50%)', background:`linear-gradient(135deg,${T.goldDim}cc,${T.goldDim})`, color:T.text, borderRadius:10, padding:'10px 22px', fontSize:19, fontWeight:600, zIndex:999, border:`1px solid ${T.gold}`, boxShadow:`0 0 24px ${T.goldGlow}`, whiteSpace:'nowrap' }}>
           {toast}
         </div>
       )}

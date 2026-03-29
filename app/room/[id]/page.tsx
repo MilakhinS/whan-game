@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 const GOLD = '#c9a84c'
 const GOLD_DIM = '#7a6020'
 const panel = (extra={}) => ({ background:'rgba(18,14,4,0.88)', border:'1px solid rgba(201,168,76,0.18)', borderRadius:20, backdropFilter:'blur(12px)', ...extra } as any)
-const gbtn = (active=true, extra={}) => ({ padding:'11px 22px', borderRadius:12, border:`1px solid ${active?GOLD:GOLD_DIM+'44'}`, background:active?'linear-gradient(135deg,#3d2a00,#6b4a0a,#3d2a00)':'transparent', color:active?'#f0d080':'#5a4820', cursor:active?'pointer':'not-allowed', fontSize:14, fontWeight:600, boxShadow:active?`0 2px 16px rgba(201,168,76,0.25)`:'none', transition:'all 0.18s', ...extra } as any)
+const gbtn = (active=true, extra={}) => ({ padding:'11px 22px', borderRadius:12, border:`1px solid ${active?GOLD:GOLD_DIM+'44'}`, background:active?'linear-gradient(135deg,#3d2a00,#6b4a0a,#3d2a00)':'transparent', color:active?'#f0d080':'#5a4820', cursor:active?'pointer':'not-allowed', fontSize:18, fontWeight:600, boxShadow:active?`0 2px 16px rgba(201,168,76,0.25)`:'none', transition:'all 0.18s', ...extra } as any)
 
 type Player = { player_id: string; seat: number; is_ready: boolean; is_bot?: boolean; bot_name?: string; profile?: Profile }
 type Message = { id: string; player_id: string; username: string; message: string; created_at: string }
@@ -218,19 +218,19 @@ export default function RoomPage() {
         {/* Header */}
         <div style={{ ...panel(), padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div>
-            <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', letterSpacing:2 }}>КОМНАТА</div>
-            <div style={{ fontSize:17, fontWeight:700, color:GOLD }}>{room?.name||'...'}</div>
+            <div style={{ fontSize:19, color:'rgba(201,168,76,0.4)', letterSpacing:2 }}>КОМНАТА</div>
+            <div style={{ fontSize:19, fontWeight:700, color:GOLD }}>{room?.name||'...'}</div>
           </div>
           <div style={{ display:'flex', gap:8, alignItems:'center' }}>
             {room?.password && <span>🔒</span>}
-            <span style={{ fontSize:11, color:'rgba(201,168,76,0.5)', background:'rgba(201,168,76,0.1)', padding:'4px 10px', borderRadius:20, border:'1px solid rgba(201,168,76,0.2)' }}>
+            <span style={{ fontSize:19, color:'rgba(201,168,76,0.5)', background:'rgba(201,168,76,0.1)', padding:'4px 10px', borderRadius:20, border:'1px solid rgba(201,168,76,0.2)' }}>
               {mode==='team'?'2×2':'Solo'}
             </span>
-            <span style={{ fontSize:11, color:'rgba(201,168,76,0.4)' }}>{totalCount}/{maxP}</span>
+            <span style={{ fontSize:19, color:'rgba(201,168,76,0.4)' }}>{totalCount}/{maxP}</span>
             <button onClick={()=>{
               navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`)
               showToast('🔗 Ссылка скопирована!')
-            }} style={{ padding:'5px 12px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:11, border:`1px solid ${GOLD}44`, background:`${GOLD}11`, color:GOLD }}>
+            }} style={{ padding:'5px 12px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:19, border:`1px solid ${GOLD}44`, background:`${GOLD}11`, color:GOLD }}>
               🔗
             </button>
           </div>
@@ -239,9 +239,9 @@ export default function RoomPage() {
         {/* Players */}
         <div style={{ ...panel(), padding:'14px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-            <div style={{ fontSize:10, color:'rgba(201,168,76,0.45)', letterSpacing:2 }}>ИГРОКИ</div>
+            <div style={{ fontSize:18, color:'rgba(201,168,76,0.45)', letterSpacing:2 }}>ИГРОКИ</div>
             {canAddBot && (
-              <button onClick={addBot} style={{ padding:'5px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:11, border:`1px solid ${GOLD}44`, background:`${GOLD}11`, color:GOLD }}>
+              <button onClick={addBot} style={{ padding:'5px 14px', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontSize:19, border:`1px solid ${GOLD}44`, background:`${GOLD}11`, color:GOLD }}>
                 + Бот
               </button>
             )}
@@ -258,15 +258,15 @@ export default function RoomPage() {
                     background:player?(isBot?'#3498db':player.is_ready?'#27ae60':'#f39c12'):'#2a2a2a',
                     boxShadow:isBot?'0 0 6px #3498db':player?.is_ready?'0 0 6px #27ae60':'none' }}/>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:player?'#e8d5a3':'rgba(255,255,255,0.15)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <div style={{ fontSize:19, fontWeight:600, color:player?'#e8d5a3':'rgba(255,255,255,0.15)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {isBot?`🤖 ${player?.bot_name||'Бот'}`:player?`${player.profile?.username}${isMe?' (вы)':''}` :'Ожидание…'}
                     </div>
-                    <div style={{ fontSize:9, color:'rgba(201,168,76,0.35)', marginTop:1 }}>
+                    <div style={{ fontSize:19, color:'rgba(201,168,76,0.35)', marginTop:1 }}>
                       {SEAT_LABEL(seat,mode)}{player?.profile?.mmr&&!isBot?` · ${player.profile.mmr} MMR`:''}
                     </div>
                   </div>
-                  {player&&!isBot&&<div style={{ fontSize:10, color:player.is_ready?'#27ae60':'#f39c12', flexShrink:0 }}>{player.is_ready?'✓ Готов':'Не готов'}</div>}
-                  {isBot&&isHost&&<button onClick={()=>removeBot(player!.player_id)} style={{ background:'transparent', border:'1px solid rgba(231,76,60,0.3)', borderRadius:6, color:'rgba(231,76,60,0.7)', padding:'2px 8px', fontSize:10, cursor:'pointer' }}>✕</button>}
+                  {player&&!isBot&&<div style={{ fontSize:18, color:player.is_ready?'#27ae60':'#f39c12', flexShrink:0 }}>{player.is_ready?'✓ Готов':'Не готов'}</div>}
+                  {isBot&&isHost&&<button onClick={()=>removeBot(player!.player_id)} style={{ background:'transparent', border:'1px solid rgba(231,76,60,0.3)', borderRadius:6, color:'rgba(231,76,60,0.7)', padding:'2px 8px', fontSize:18, cursor:'pointer' }}>✕</button>}
                 </motion.div>
               )
             })}
@@ -275,23 +275,23 @@ export default function RoomPage() {
 
         {/* Chat */}
         <div style={{ ...panel(), padding:'14px', display:'flex', flexDirection:'column', gap:8 }}>
-          <div style={{ fontSize:10, color:'rgba(201,168,76,0.45)', letterSpacing:2 }}>ЧАТ</div>
+          <div style={{ fontSize:18, color:'rgba(201,168,76,0.45)', letterSpacing:2 }}>ЧАТ</div>
 
           {/* Messages */}
           <div ref={chatRef} style={{ height:160, overflowY:'auto', display:'flex', flexDirection:'column', gap:6, paddingRight:4 }}>
             {messages.length===0 && (
-              <div style={{ textAlign:'center', color:'rgba(201,168,76,0.2)', fontSize:12, marginTop:40, fontStyle:'italic' }}>Напишите первым! 👋</div>
+              <div style={{ textAlign:'center', color:'rgba(201,168,76,0.2)', fontSize:18, marginTop:40, fontStyle:'italic' }}>Напишите первым! 👋</div>
             )}
             {messages.map(msg=>{
               const isMe = msg.player_id === myId
               return (
                 <div key={msg.id} style={{ display:'flex', flexDirection:isMe?'row-reverse':'row', gap:8, alignItems:'flex-end' }}>
                   <div style={{ maxWidth:'75%' }}>
-                    {!isMe && <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', marginBottom:2, paddingLeft:4 }}>{msg.username}</div>}
-                    <div style={{ background:isMe?'linear-gradient(135deg,#3d2a00,#6b4a0a)':'rgba(255,255,255,0.05)', border:`1px solid ${isMe?'rgba(201,168,76,0.3)':'rgba(255,255,255,0.08)'}`, borderRadius:isMe?'14px 14px 4px 14px':'14px 14px 14px 4px', padding:'8px 12px', fontSize:13, color:'#e8d5a3', lineHeight:1.4, wordBreak:'break-word' }}>
+                    {!isMe && <div style={{ fontSize:19, color:'rgba(201,168,76,0.4)', marginBottom:2, paddingLeft:4 }}>{msg.username}</div>}
+                    <div style={{ background:isMe?'linear-gradient(135deg,#3d2a00,#6b4a0a)':'rgba(255,255,255,0.05)', border:`1px solid ${isMe?'rgba(201,168,76,0.3)':'rgba(255,255,255,0.08)'}`, borderRadius:isMe?'14px 14px 4px 14px':'14px 14px 14px 4px', padding:'8px 12px', fontSize:19, color:'#e8d5a3', lineHeight:1.4, wordBreak:'break-word' }}>
                       {msg.message}
                     </div>
-                    <div style={{ fontSize:9, color:'rgba(201,168,76,0.25)', marginTop:2, paddingLeft:4, textAlign:isMe?'right':'left' }}>{formatTime(msg.created_at)}</div>
+                    <div style={{ fontSize:19, color:'rgba(201,168,76,0.25)', marginTop:2, paddingLeft:4, textAlign:isMe?'right':'left' }}>{formatTime(msg.created_at)}</div>
                   </div>
                 </div>
               )
@@ -301,14 +301,14 @@ export default function RoomPage() {
           {/* Input */}
           <div style={{ display:'flex', gap:8 }}>
             <input
-              style={{ flex:1, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:12, padding:'9px 12px', color:'#e8d5a3', fontSize:13, outline:'none', fontFamily:'inherit' }}
+              style={{ flex:1, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:12, padding:'9px 12px', color:'#e8d5a3', fontSize:19, outline:'none', fontFamily:'inherit' }}
               placeholder="Написать сообщение…"
               value={msgInput}
               onChange={e=>setMsgInput(e.target.value)}
               onKeyDown={e=>e.key==='Enter'&&sendMessage()}
               maxLength={200}
             />
-            <button onClick={sendMessage} disabled={!msgInput.trim()} style={{ padding:'9px 16px', borderRadius:12, cursor:msgInput.trim()?'pointer':'not-allowed', fontFamily:'inherit', fontSize:13, border:`1px solid ${GOLD}44`, background:msgInput.trim()?`${GOLD}22`:'transparent', color:msgInput.trim()?GOLD:'rgba(201,168,76,0.3)', transition:'all 0.15s' }}>
+            <button onClick={sendMessage} disabled={!msgInput.trim()} style={{ padding:'9px 16px', borderRadius:12, cursor:msgInput.trim()?'pointer':'not-allowed', fontFamily:'inherit', fontSize:19, border:`1px solid ${GOLD}44`, background:msgInput.trim()?`${GOLD}22`:'transparent', color:msgInput.trim()?GOLD:'rgba(201,168,76,0.3)', transition:'all 0.15s' }}>
               ➤
             </button>
           </div>
@@ -324,13 +324,13 @@ export default function RoomPage() {
               {loading?'Запуск…':canStart?`▶ Начать (${totalCount})`:'Нужно 2+ игрока'}
             </button>
           ) : (
-            <div style={{ flex:2, textAlign:'center', fontSize:11, color:'rgba(201,168,76,0.3)', alignSelf:'center' }}>Ждём хоста…</div>
+            <div style={{ flex:2, textAlign:'center', fontSize:19, color:'rgba(201,168,76,0.3)', alignSelf:'center' }}>Ждём хоста…</div>
           )}
         </div>
       </div>
 
       <style>{`@keyframes smokeRise{0%{transform:translateY(0) scale(1);opacity:0}20%{opacity:1}100%{transform:translateY(-80vh) scale(3);opacity:0}}`}</style>
-      {toast && <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#3d2a00,#6b4a0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, whiteSpace:'nowrap' }}>{toast}</div>}
+      {toast && <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#3d2a00,#6b4a0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:19, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, whiteSpace:'nowrap' }}>{toast}</div>}
     </div>
   )
 }

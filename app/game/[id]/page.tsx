@@ -13,7 +13,7 @@ const GOLD = '#c9a84c'
 const GOLD_DIM = '#7a6020'
 const GOLD_GLOW = 'rgba(201,168,76,0.35)'
 const panel = (extra={}) => ({ background:'rgba(18,14,4,0.88)', border:'1px solid rgba(201,168,76,0.18)', borderRadius:16, backdropFilter:'blur(12px)', ...extra })
-const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?GOLD:GOLD_DIM+'44'}`, background:active?'linear-gradient(135deg,#3d2a00,#6b4a0a,#3d2a00)':'rgba(255,255,255,0.03)', color:active?'#f0d080':'#5a4820', cursor:active?'pointer':'not-allowed', fontSize:14, fontWeight:600, boxShadow:active?`0 2px 16px ${GOLD_GLOW}`:'none', transition:'all 0.18s', ...extra })
+const gbtn = (active=true, extra={}) => ({ padding:'10px 22px', borderRadius:12, border:`1px solid ${active?GOLD:GOLD_DIM+'44'}`, background:active?'linear-gradient(135deg,#3d2a00,#6b4a0a,#3d2a00)':'rgba(255,255,255,0.03)', color:active?'#f0d080':'#5a4820', cursor:active?'pointer':'not-allowed', fontSize:18, fontWeight:600, boxShadow:active?`0 2px 16px ${GOLD_GLOW}`:'none', transition:'all 0.18s', ...extra })
 
 // ── Sound engine (Web Audio API, no files needed) ─────────────
 function playSound(type: 'card'|'pass'|'win'|'fourspade'|'reaction') {
@@ -120,7 +120,7 @@ function CardFace({ card, selected, onClick, dim, small, tableCard }: { card:Car
 
 function CardBack({ small }: { small?: boolean }) {
   const w=small?28:52, h=small?40:76
-  return <div style={{ width:w, height:h, flexShrink:0, background:'linear-gradient(145deg,#120c02,#1e1508,#120c02)', border:'1.5px solid rgba(201,168,76,0.2)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ fontSize:9, color:'rgba(201,168,76,0.25)' }}>✦</div></div>
+  return <div style={{ width:w, height:h, flexShrink:0, background:'linear-gradient(145deg,#120c02,#1e1508,#120c02)', border:'1.5px solid rgba(201,168,76,0.2)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ fontSize:19, color:'rgba(201,168,76,0.25)' }}>✦</div></div>
 }
 
 // ── Win effect with gold particles ───────────────────────────
@@ -159,7 +159,7 @@ function FourSpadeEffect({ show }: { show: boolean }) {
     <AnimatePresence>{show&&<motion.div initial={{opacity:0,scale:0.5}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:1.5}} transition={{duration:0.4}} style={{ position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none' }}>
       <div style={{ position:'absolute',inset:0,background:'radial-gradient(ellipse,rgba(255,215,0,0.18) 0%,transparent 70%)' }}/>
       <motion.div animate={{rotate:[0,10,-10,0],scale:[1,1.15,1]}} transition={{repeat:2,duration:0.3}} style={{ fontSize:72,filter:'drop-shadow(0 0 30px gold)' }}>♠</motion.div>
-      <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} style={{ position:'absolute',top:'55%',fontSize:22,fontWeight:'bold',color:GOLD,letterSpacing:4 }}>4 ПИКИ!</motion.div>
+      <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} style={{ position:'absolute',top:'55%',fontSize:24,fontWeight:'bold',color:GOLD,letterSpacing:4 }}>4 ПИКИ!</motion.div>
     </motion.div>}</AnimatePresence>
   )
 }
@@ -633,22 +633,22 @@ export default function GamePage() {
       <WinEffect show={showWin} winner={gs.winner}/>
       <div style={{ position:'fixed', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${GOLD},transparent)`, zIndex:10 }}/>
 
-      {toast && <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#2d1a00,#6b4f0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:13, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, boxShadow:`0 0 24px ${GOLD_GLOW}`, whiteSpace:'nowrap' }}>{toast}</div>}
+      {toast && <div style={{ position:'fixed', bottom:90, left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#2d1a00,#6b4f0a)', color:'#f0d080', borderRadius:10, padding:'10px 22px', fontSize:19, fontWeight:600, zIndex:999, border:`1px solid ${GOLD}`, boxShadow:`0 0 24px ${GOLD_GLOW}`, whiteSpace:'nowrap' }}>{toast}</div>}
 
       <div style={{ maxWidth:500, margin:'0 auto', position:'relative', zIndex:1 }}>
 
         {/* Top bar */}
         <div style={{ ...panel(), padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
           <div>
-            <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', letterSpacing:2 }}>🪔 WHAN</div>
-            <div style={{ fontSize:11, color:'rgba(201,168,76,0.55)', marginTop:2 }}>
+            <div style={{ fontSize:13, color:'rgba(201,168,76,0.4)', letterSpacing:2 }}>🪔 WHAN</div>
+            <div style={{ fontSize:19, color:'rgba(201,168,76,0.55)', marginTop:2 }}>
               Раунд начал: <span style={{color:GOLD,fontWeight:600}}>{gs.playerNames[gs.roundStarter]}</span>
               {' · '}Ходит: <span style={{color:GOLD,fontWeight:600}}>{gs.playerNames[gs.currentPlayer]}</span>
             </div>
           </div>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            {mode==='team' && <div style={{ textAlign:'center' }}><div style={{fontSize:9,color:'rgba(201,168,76,0.4)'}}>Счёт</div><div style={{fontSize:14,color:GOLD,fontWeight:700}}>{gs.scores[0]} : {gs.scores[1]}</div></div>}
-            <button onClick={()=>router.push('/')} style={{ background:'transparent', border:'none', color:'rgba(201,168,76,0.4)', cursor:'pointer', fontSize:13 }}>⏻</button>
+            {mode==='team' && <div style={{ textAlign:'center' }}><div style={{fontSize:19,color:'rgba(201,168,76,0.4)'}}>Счёт</div><div style={{fontSize:18,color:GOLD,fontWeight:700}}>{gs.scores[0]} : {gs.scores[1]}</div></div>}
+            <button onClick={()=>router.push('/')} style={{ background:'transparent', border:'none', color:'rgba(201,168,76,0.4)', cursor:'pointer', fontSize:19 }}>⏻</button>
           </div>
         </div>
 
@@ -665,21 +665,21 @@ export default function GamePage() {
               <motion.div key={seat} animate={{scale:active?1.04:1}}
                 style={{ ...panel(), padding:'8px 6px', textAlign:'center', border:`1.5px solid ${active?GOLD:ally?'rgba(201,168,76,0.2)':'rgba(255,255,255,0.06)'}`, boxShadow:active?`0 0 16px ${GOLD_GLOW}`:'none', position:'relative', opacity:done?0.5:1, transition:'all 0.25s' }}>
                 <AnimatePresence>
-                  {hasCrown && <motion.div initial={{y:-10,opacity:0,scale:0.5}} animate={{y:-20,opacity:1,scale:1}} exit={{opacity:0}} style={{ position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',fontSize:16,filter:'drop-shadow(0 0 6px gold)' }}>👑</motion.div>}
-                  {hasPass && <motion.div key="pass" initial={{y:0,opacity:1,scale:1}} animate={{y:-30,opacity:0,scale:1.3}} transition={{duration:0.9}} style={{ position:'absolute',top:-8,left:'50%',transform:'translateX(-50%)',fontSize:11,fontWeight:700,color:'rgba(201,168,76,0.7)',background:'rgba(0,0,0,0.6)',borderRadius:8,padding:'2px 8px',zIndex:10,whiteSpace:'nowrap' }}>ПАС</motion.div>}
-                  {reaction && <motion.div key={reaction.id} initial={{y:0,opacity:1,scale:0.5}} animate={{y:-40,opacity:0,scale:1.4}} transition={{duration:2}} style={{ position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',fontSize:22,zIndex:10 }}>{reaction.emoji}</motion.div>}
+                  {hasCrown && <motion.div initial={{y:-10,opacity:0,scale:0.5}} animate={{y:-20,opacity:1,scale:1}} exit={{opacity:0}} style={{ position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',fontSize:18,filter:'drop-shadow(0 0 6px gold)' }}>👑</motion.div>}
+                  {hasPass && <motion.div key="pass" initial={{y:0,opacity:1,scale:1}} animate={{y:-30,opacity:0,scale:1.3}} transition={{duration:0.9}} style={{ position:'absolute',top:-8,left:'50%',transform:'translateX(-50%)',fontSize:19,fontWeight:700,color:'rgba(201,168,76,0.7)',background:'rgba(0,0,0,0.6)',borderRadius:8,padding:'2px 8px',zIndex:10,whiteSpace:'nowrap' }}>ПАС</motion.div>}
+                  {reaction && <motion.div key={reaction.id} initial={{y:0,opacity:1,scale:0.5}} animate={{y:-40,opacity:0,scale:1.4}} transition={{duration:2}} style={{ position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',fontSize:24,zIndex:10 }}>{reaction.emoji}</motion.div>}
                 </AnimatePresence>
                 {gs.roundStarter===seat && !active && <div style={{ position:'absolute',top:6,right:6,width:5,height:5,borderRadius:'50%',background:GOLD }}/>}
-                <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', marginBottom:2 }}>{mode==='team'?(ally?'союзник':'соперник'):'соперник'}</div>
-                <div style={{ fontSize:11, fontWeight:600, color:active?GOLD:'#b0976a', marginBottom:4, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                <div style={{ fontSize:11, color:'rgba(201,168,76,0.4)', marginBottom:2 }}>{mode==='team'?(ally?'союзник':'соперник'):'соперник'}</div>
+                <div style={{ fontSize:19, fontWeight:600, color:active?GOLD:'#b0976a', marginBottom:4, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                   {gs.playerNames[seat]}{active?' 🪔':''}
                 </div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:2, justifyContent:'center', minHeight:36, alignItems:'center' }}>
-                  {done ? <span style={{fontSize:9,color:GOLD}}>вышел ✓</span>
+                  {done ? <span style={{fontSize:19,color:GOLD}}>вышел ✓</span>
                     : (gs.hands[seat]||[]).slice(0,5).map((_:any,i:number)=><CardBack key={i} small/>)}
-                  {!done && (gs.hands[seat]||[]).length>5 && <span style={{fontSize:8,color:'rgba(201,168,76,0.3)'}}>+{(gs.hands[seat]||[]).length-5}</span>}
+                  {!done && (gs.hands[seat]||[]).length>5 && <span style={{fontSize:19,color:'rgba(201,168,76,0.3)'}}>+{(gs.hands[seat]||[]).length-5}</span>}
                 </div>
-                <div style={{ fontSize:9, color:'rgba(201,168,76,0.25)', marginTop:3 }}>{done?'—':`${(gs.hands[seat]||[]).length} карт`}</div>
+                <div style={{ fontSize:11, color:'rgba(201,168,76,0.25)', marginTop:3 }}>{done?'—':`${(gs.hands[seat]||[]).length} карт`}</div>
               </motion.div>
             )
           })}
@@ -687,21 +687,21 @@ export default function GamePage() {
 
         {/* Table */}
         <div style={{ ...panel(), padding:'12px 10px', marginBottom:10, minHeight:110, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ fontSize:9, color:'rgba(201,168,76,0.3)', letterSpacing:3, marginBottom:5 }}>♦  СТОЛ  ♦</div>
+          <div style={{ fontSize:12, color:'rgba(201,168,76,0.3)', letterSpacing:3, marginBottom:5 }}>♦  СТОЛ  ♦</div>
           {gs.tableCombo ? (
             <div style={{ textAlign:'center' }}>
               <div style={{ display:'flex', gap:4, justifyContent:'center', flexWrap:'wrap' }}>
                 {gs.tableCombo.cards.map((c:Card, i:number)=><CardFace key={c.id} card={c} tableCard/>)}
               </div>
-              <div style={{ fontSize:10, marginTop:5, color:'rgba(201,168,76,0.45)' }}>
+              <div style={{ fontSize:18, marginTop:5, color:'rgba(201,168,76,0.45)' }}>
                 {comboLabel(gs.tableCombo)}{gs.lastPlayer!==null?` · ${gs.playerNames[gs.lastPlayer]}`:''}
               </div>
             </div>
-          ) : <div style={{ color:'rgba(201,168,76,0.2)', fontStyle:'italic', fontSize:13 }}>Стол пуст — играй что хочешь</div>}
+          ) : <div style={{ color:'rgba(201,168,76,0.2)', fontStyle:'italic', fontSize:19 }}>Стол пуст — играй что хочешь</div>}
         </div>
 
         {/* Status + Timer */}
-        <div style={{ textAlign:'center', fontSize:12, marginBottom:6, minHeight:18, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+        <div style={{ textAlign:'center', fontSize:18, marginBottom:6, minHeight:18, display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
           <div>
             {gs.phase==='roundEnd'
               ? <span style={{color:GOLD,fontWeight:700}}>🏆 {mode==='team'?`Команда ${gs.winner===0?'A':'B'} победила`:'Solo раунд завершён'} {gs.winPoints>1?'• +2 бонус!':''}</span>
@@ -722,7 +722,7 @@ export default function GamePage() {
                   style={{transition:'stroke-dashoffset 0.9s linear, stroke 0.3s'}}
                 />
               </svg>
-              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:turnTimer<=10?'#e74c3c':GOLD }}>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:19, fontWeight:700, color:turnTimer<=10?'#e74c3c':GOLD }}>
                 {turnTimer}
               </div>
             </div>
@@ -740,7 +740,7 @@ export default function GamePage() {
               </motion.div>
             ))}
           </AnimatePresence>
-          <div style={{ fontSize:9, color:'rgba(201,168,76,0.35)', textAlign:'center', marginBottom:6, letterSpacing:2 }}>
+          <div style={{ fontSize:11, color:'rgba(201,168,76,0.35)', textAlign:'center', marginBottom:6, letterSpacing:2 }}>
             {myDone?'ВЫШЕЛ 🎉':`ТВОИ КАРТЫ (${myHand.length})`}
           </div>
           {myDone ? <div style={{textAlign:'center',fontSize:24,padding:8}}>🎉</div>
@@ -750,7 +750,7 @@ export default function GamePage() {
         </div>}
 
         {/* Selection */}
-        {selCards.length>0 && <div style={{ textAlign:'center', fontSize:12, marginBottom:6, color:'rgba(201,168,76,0.7)' }}>
+        {selCards.length>0 && <div style={{ textAlign:'center', fontSize:18, marginBottom:6, color:'rgba(201,168,76,0.7)' }}>
           {selCards.length} карт · {selCombo?<span style={{color:GOLD}}>✓ {comboLabel(selCombo)}</span>:<span style={{color:'#8b1a1a'}}>✗ Недопустимо</span>}
         </div>}
 
@@ -779,7 +779,7 @@ export default function GamePage() {
                   style={{ position:'absolute', width:40, height:58, background:'linear-gradient(160deg,#f5ede0,#e8d8c0)', border:'1.5px solid rgba(140,110,70,0.5)', borderRadius:6, boxShadow:'0 4px 12px rgba(0,0,0,0.5)' }}/>
               ))}
               <motion.div initial={{opacity:0,scale:0.8}} animate={{opacity:1,scale:1}} exit={{opacity:0}}
-                style={{ color:GOLD, fontSize:14, fontWeight:600, letterSpacing:3, background:'rgba(0,0,0,0.7)', padding:'8px 20px', borderRadius:10, border:`1px solid ${GOLD}44` }}>
+                style={{ color:GOLD, fontSize:18, fontWeight:600, letterSpacing:3, background:'rgba(0,0,0,0.7)', padding:'8px 20px', borderRadius:10, border:`1px solid ${GOLD}44` }}>
                 НОВЫЙ РАУНД
               </motion.div>
             </motion.div>
@@ -790,7 +790,7 @@ export default function GamePage() {
         <AnimatePresence>
           {passAnims.some(p=>p.seat===mySeat) && (
             <motion.div key="mypass" initial={{y:0,opacity:1}} animate={{y:-50,opacity:0}} transition={{duration:0.8}}
-              style={{ position:'fixed', bottom:180, left:'50%', transform:'translateX(-50%)', fontSize:16, fontWeight:700, color:GOLD, background:'rgba(0,0,0,0.7)', borderRadius:10, padding:'6px 18px', zIndex:50, pointerEvents:'none' }}>
+              style={{ position:'fixed', bottom:180, left:'50%', transform:'translateX(-50%)', fontSize:18, fontWeight:700, color:GOLD, background:'rgba(0,0,0,0.7)', borderRadius:10, padding:'6px 18px', zIndex:50, pointerEvents:'none' }}>
               ПАС
             </motion.div>
           )}
@@ -807,11 +807,11 @@ export default function GamePage() {
                   strokeDashoffset={`${2*Math.PI*13*(1-turnTimer/30)}`}
                   style={{ transition:'stroke-dashoffset 1s linear, stroke 0.3s' }}/>
               </svg>
-              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:turnTimer<=10?'#e74c3c':GOLD }}>
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, fontWeight:700, color:turnTimer<=10?'#e74c3c':GOLD }}>
                 {turnTimer}
               </div>
             </div>
-            <div style={{ fontSize:11, color:turnTimer<=10?'#e74c3c':'rgba(201,168,76,0.6)' }}>
+            <div style={{ fontSize:19, color:turnTimer<=10?'#e74c3c':'rgba(201,168,76,0.6)' }}>
               {turnTimer<=10?'⚠️ Ходи быстрее!':'Твой ход'}
             </div>
           </div>
@@ -820,8 +820,8 @@ export default function GamePage() {
         {/* Spectator banner */}
         {isSpectator && (
           <div style={{ ...panel(), padding:'12px 16px', marginBottom:8, textAlign:'center', border:'1px solid rgba(255,165,0,0.3)', background:'rgba(255,165,0,0.06)' }}>
-            <div style={{ fontSize:13, color:'#f39c12', fontWeight:600 }}>👁 Ты зритель</div>
-            <div style={{ fontSize:11, color:'rgba(255,165,0,0.6)', marginTop:4 }}>Присоединишься к следующему раунду</div>
+            <div style={{ fontSize:19, color:'#f39c12', fontWeight:600 }}>👁 Ты зритель</div>
+            <div style={{ fontSize:19, color:'rgba(255,165,0,0.6)', marginTop:4 }}>Присоединишься к следующему раунду</div>
           </div>
         )}
 
@@ -833,10 +833,10 @@ export default function GamePage() {
           </> : <>
             <button onClick={handlePlay} disabled={!isMyTurn||!selCards.length} style={gbtn(isMyTurn&&!!selCards.length,{flex:2} as any)}>ИГРАТЬ</button>
             <button onClick={handlePass} disabled={!isMyTurn||!gs.tableCombo} style={gbtn(false,{flex:1,color:isMyTurn&&gs.tableCombo?GOLD:GOLD_DIM,border:`1px solid ${isMyTurn&&gs.tableCombo?GOLD_DIM:'rgba(255,255,255,0.05)'}`,cursor:isMyTurn&&gs.tableCombo?'pointer':'not-allowed'} as any)}>ПАС</button>
-            <button onClick={()=>{ setChatOpen(o=>!o); setUnreadCount(0); prevMsgCount.current = messages.length }} style={{ padding:'10px 12px', borderRadius:12, border:`1px solid ${chatOpen?GOLD:'rgba(201,168,76,0.2)'}`, background:chatOpen?`rgba(201,168,76,0.15)`:'rgba(255,255,255,0.03)', color:chatOpen?GOLD:'rgba(201,168,76,0.5)', cursor:'pointer', fontSize:16, position:'relative' }}>
+            <button onClick={()=>{ setChatOpen(o=>!o); setUnreadCount(0); prevMsgCount.current = messages.length }} style={{ padding:'10px 12px', borderRadius:12, border:`1px solid ${chatOpen?GOLD:'rgba(201,168,76,0.2)'}`, background:chatOpen?`rgba(201,168,76,0.15)`:'rgba(255,255,255,0.03)', color:chatOpen?GOLD:'rgba(201,168,76,0.5)', cursor:'pointer', fontSize:18, position:'relative' }}>
               💬
               {unreadCount>0 && !chatOpen && (
-                <div style={{ position:'absolute', top:-6, right:-6, minWidth:18, height:18, borderRadius:9, background:'#e74c3c', color:'white', fontSize:10, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 4px', border:'2px solid #0a0800' }}>
+                <div style={{ position:'absolute', top:-6, right:-6, minWidth:18, height:18, borderRadius:9, background:'#e74c3c', color:'white', fontSize:18, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 4px', border:'2px solid #0a0800' }}>
                   {unreadCount>9?'9+':unreadCount}
                 </div>
               )}
@@ -845,14 +845,14 @@ export default function GamePage() {
         </div>
 
         {/* Log dropdown */}
-        <button onClick={()=>setLogOpen(o=>!o)} style={{ width:'100%', padding:'7px 12px', borderRadius:10, border:'1px solid rgba(201,168,76,0.08)', background:'rgba(255,255,255,0.02)', color:'rgba(201,168,76,0.4)', cursor:'pointer', fontFamily:'inherit', fontSize:11, display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:logOpen?0:0 }}>
+        <button onClick={()=>setLogOpen(o=>!o)} style={{ width:'100%', padding:'7px 12px', borderRadius:10, border:'1px solid rgba(201,168,76,0.08)', background:'rgba(255,255,255,0.02)', color:'rgba(201,168,76,0.4)', cursor:'pointer', fontFamily:'inherit', fontSize:19, display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:logOpen?0:0 }}>
           <span>📋 История ходов</span>
           <span>{logOpen?'▲':'▼'}</span>
         </button>
         <AnimatePresence>
           {logOpen && (
             <motion.div initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} style={{ overflow:'hidden' }}>
-              <div style={{ ...panel(), padding:'8px 10px', fontSize:10, color:'rgba(201,168,76,0.45)', maxHeight:140, overflowY:'auto', border:'1px solid rgba(201,168,76,0.06)', borderRadius:12, marginTop:4 }}>
+              <div style={{ ...panel(), padding:'8px 10px', fontSize:18, color:'rgba(201,168,76,0.45)', maxHeight:140, overflowY:'auto', border:'1px solid rgba(201,168,76,0.06)', borderRadius:12, marginTop:4 }}>
                 {(gs.log||[]).length===0 ? <span style={{opacity:0.4}}>Нет ходов</span>
                   : (gs.log||[]).map((l:string,i:number)=><div key={i} style={{borderBottom:'1px solid rgba(201,168,76,0.04)',padding:'2px 0'}}>{l}</div>)}
               </div>
@@ -870,22 +870,22 @@ export default function GamePage() {
               {/* Handle + header */}
               <div style={{ padding:'8px 14px 6px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(201,168,76,0.08)', flexShrink:0, position:'relative' }}>
                 <div style={{ width:36, height:4, background:'rgba(201,168,76,0.2)', borderRadius:2, position:'absolute', left:'50%', transform:'translateX(-50%)', top:8 }}/>
-                <div style={{ fontSize:12, fontWeight:600, color:GOLD, marginTop:4 }}>💬 Чат</div>
-                <button onClick={()=>setChatOpen(false)} style={{ background:'transparent', border:'none', color:'rgba(201,168,76,0.5)', fontSize:20, cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
+                <div style={{ fontSize:18, fontWeight:600, color:GOLD, marginTop:4 }}>💬 Чат</div>
+                <button onClick={()=>setChatOpen(false)} style={{ background:'transparent', border:'none', color:'rgba(201,168,76,0.5)', fontSize:24, cursor:'pointer', padding:'0 4px', lineHeight:1 }}>×</button>
               </div>
               {/* Messages */}
               <div ref={chatRef} style={{ flex:1, overflowY:'auto', padding:'8px 12px', display:'flex', flexDirection:'column', gap:6 }}>
-                {messages.length===0 && <div style={{ textAlign:'center', color:'rgba(201,168,76,0.2)', fontSize:11, marginTop:16, fontStyle:'italic' }}>Напиши первым! 👋</div>}
+                {messages.length===0 && <div style={{ textAlign:'center', color:'rgba(201,168,76,0.2)', fontSize:19, marginTop:16, fontStyle:'italic' }}>Напиши первым! 👋</div>}
                 {messages.map((msg:any)=>{
                   const isMe = msg.player_id===myId
                   return (
                     <div key={msg.id} style={{ display:'flex', flexDirection:isMe?'row-reverse':'row', gap:6, alignItems:'flex-end' }}>
                       <div style={{ maxWidth:'75%' }}>
-                        {!isMe && <div style={{ fontSize:9, color:'rgba(201,168,76,0.4)', marginBottom:2, paddingLeft:4 }}>{msg.username}</div>}
-                        <div style={{ background:isMe?'linear-gradient(135deg,#3d2a00,#6b4a0a)':'rgba(255,255,255,0.07)', border:`1px solid ${isMe?'rgba(201,168,76,0.3)':'rgba(255,255,255,0.08)'}`, borderRadius:isMe?'12px 12px 4px 12px':'12px 12px 12px 4px', padding:'6px 10px', fontSize:12, color:'#e8d5a3', lineHeight:1.4, wordBreak:'break-word' }}>
+                        {!isMe && <div style={{ fontSize:19, color:'rgba(201,168,76,0.4)', marginBottom:2, paddingLeft:4 }}>{msg.username}</div>}
+                        <div style={{ background:isMe?'linear-gradient(135deg,#3d2a00,#6b4a0a)':'rgba(255,255,255,0.07)', border:`1px solid ${isMe?'rgba(201,168,76,0.3)':'rgba(255,255,255,0.08)'}`, borderRadius:isMe?'12px 12px 4px 12px':'12px 12px 12px 4px', padding:'6px 10px', fontSize:18, color:'#e8d5a3', lineHeight:1.4, wordBreak:'break-word' }}>
                           {msg.message}
                         </div>
-                        <div style={{ fontSize:9, color:'rgba(201,168,76,0.25)', marginTop:2, paddingLeft:4, textAlign:isMe?'right':'left' }}>{formatTime(msg.created_at)}</div>
+                        <div style={{ fontSize:19, color:'rgba(201,168,76,0.25)', marginTop:2, paddingLeft:4, textAlign:isMe?'right':'left' }}>{formatTime(msg.created_at)}</div>
                       </div>
                     </div>
                   )
@@ -894,7 +894,7 @@ export default function GamePage() {
               {/* Input */}
               <div style={{ padding:'8px 10px 16px', borderTop:'1px solid rgba(201,168,76,0.08)', display:'flex', gap:8, flexShrink:0, background:'rgba(8,4,1,0.97)', paddingBottom:'max(16px, env(safe-area-inset-bottom))' }}>
                 <input
-                  style={{ flex:1, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:22, padding:'10px 16px', color:'#e8d5a3', fontSize:16, outline:'none', fontFamily:'inherit' }}
+                  style={{ flex:1, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:22, padding:'10px 16px', color:'#e8d5a3', fontSize:18, outline:'none', fontFamily:'inherit' }}
                   placeholder="Сообщение…" value={msgInput}
                   onChange={e=>setMsgInput(e.target.value)}
                   onKeyDown={e=>e.key==='Enter'&&sendMessage()}
@@ -906,7 +906,7 @@ export default function GamePage() {
                   enterKeyHint="send"
                 />
                 <button onClick={sendMessage} disabled={!msgInput.trim()}
-                  style={{ width:44, height:44, borderRadius:'50%', cursor:msgInput.trim()?'pointer':'default', border:`1px solid ${GOLD}44`, background:msgInput.trim()?`linear-gradient(135deg,#3d2a00,#6b4a0a)`:'transparent', color:msgInput.trim()?GOLD:'rgba(201,168,76,0.3)', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>➤</button>
+                  style={{ width:44, height:44, borderRadius:'50%', cursor:msgInput.trim()?'pointer':'default', border:`1px solid ${GOLD}44`, background:msgInput.trim()?`linear-gradient(135deg,#3d2a00,#6b4a0a)`:'transparent', color:msgInput.trim()?GOLD:'rgba(201,168,76,0.3)', fontSize:18, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>➤</button>
               </div>
             </motion.div>
           )}
