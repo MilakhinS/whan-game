@@ -530,7 +530,14 @@ export default function GamePage() {
           await pushState({...freshGs, currentPlayer:nextActive(p,freshGs.eliminated,pc)})
           return
         }
-        const playCards = aiChoosePlay(hand, freshGs.tableCombo, false)
+        const playCards = aiChoosePlay(hand, freshGs.tableCombo, false, {
+          seat: p,
+          mode: freshGs.mode,
+          playerCount: pc,
+          hands: freshGs.hands,
+          eliminated: freshGs.eliminated,
+          lastPlayer: freshGs.lastPlayer
+        })
         if (playCards) {
           const combo = detectCombo(playCards)
           if (combo && (!freshGs.tableCombo || canBeat(freshGs.tableCombo,combo))) {

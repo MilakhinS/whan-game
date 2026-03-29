@@ -191,15 +191,48 @@ function groupByRank(hand: Card[]) {
   return Object.fromEntries(Object.entries(g).sort((a,b)=>cp({rank:a[0],suit:'',id:''})-cp({rank:b[0],suit:'',id:''})))
 }
 
-export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: boolean): Card[]|null {
-  // mustFirst just means this player goes first — they can play ANY valid combo
+export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: boolean, context?: {
+  seat: number,
+  mode: string,
+  playerCount: number,
+  hands: Card[][],    // all hands
+  eliminated: number[],
+  lastPlayer: number|null
+}): Card[]|null {
   const wilds = hand.filter(isW)
   const byRank = groupByRank(hand)
   const sorted = sortHand(hand.filter(c=>!isW(c)))
-  if (!tableCombo) return sorted.length ? [sorted[0]] : null
+
+  // ── Team awareness ──
+  const isTeamMode = context?.mode === 'team' && context?.playerCount === 4
+  const mySeat = context?.seat ?? -1
+  const allySeat = isTeamMode ? (mySeat % 2 === 0 ? mySeat + 1 : mySeat - 1) : -1 // seats 0,2 = team A; 1,3 = team B — wait: TEAMS=[[0,2],[1,3]]
+  const allyActualSeat = isTeamMode ? (mySeat === 0 ? 2 : mySeat === 2 ? 0 : mySeat === 1 ? 3 : 1) : -1
+  const allyHand = (context && allyActualSeat >= 0) ? (context.hands[allyActualSeat] || []) : []
+  const allyCardCount = allyHand.length
+  const allyEliminated = context ? context.eliminated.includes(allyActualSeat) : false
+  const lastPlayerIsAlly = context?.lastPlayer === allyActualSeat
+
+  // If ally just played and is winning — PASS to let ally finish
+  if (tableCombo && lastPlayerIsAlly && allyCardCount <= 3 && !allyEliminated) {
+    return null // pass — let ally win
+  }
+
+  if (!tableCombo) {
+    // No table — play strategically
+    if (isTeamMode && allyCardCount <= 2 && !allyEliminated) {
+      // Ally almost done — play highest card to clear fast or create opportunity
+      return sorted.length ? [sorted[sorted.length-1]] : null
+    }
+    // Normal: play lowest single card
+    return sorted.length ? [sorted[0]] : null
+  }
+
   const type = tableCombo.type
 
   if (type==='single') {
+    // If ally played last and has few cards — don't beat, save cards
+    if (lastPlayerIsAlly && allyCardCount <= 4) return null
     for (const c of sorted) { const combo=detectCombo([c]); if(combo&&canBeat(tableCombo,combo)) return [c] }
     for (const [,cards] of Object.entries(byRank)) {
       if (cards.length>=3) { const combo=detectCombo(cards.slice(0,3)); if(combo&&canBeat(tableCombo,combo)) return cards.slice(0,3) }
@@ -207,6 +240,7 @@ export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: bo
     return null
   }
   if (type==='pair') {
+    if (lastPlayerIsAlly && allyCardCount <= 4) return null
     for (const [rank,cards] of Object.entries(byRank)) {
       if (cards.length>=2 && cp({rank,suit:'',id:''})>tableCombo.power) return cards.slice(0,2)
       if (cards.length>=1 && wilds.length>=1 && cp({rank,suit:'',id:''})>tableCombo.power) return [cards[0],wilds[0]]
@@ -217,6 +251,7 @@ export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: bo
     return null
   }
   if (type==='triple') {
+    if (lastPlayerIsAlly && allyCardCount <= 4) return null
     for (const [,cards] of Object.entries(byRank)) {
       if (cards.length>=3) { const combo=detectCombo(cards.slice(0,3)); if(combo&&canBeat(tableCombo,combo)) return cards.slice(0,3) }
     }
@@ -224,7 +259,8 @@ export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: bo
     return null
   }
   if (type==='straight') {
-    const nonSpec = sortHand(hand.filter(c=>!isJk(c)&&!isW(c)))
+    if (lastPlayerIsAlly && allyCardCount <= 4) return null
+    const nonSpec = sortHand(hand.filter(c=>!isJk(c)&&!isW(c)&&!['2','3'].includes(c.rank)))
     for (let i=0;i<=nonSpec.length-(tableCombo.length||4);i++) {
       const sl = nonSpec.slice(i,i+(tableCombo.length||4))
       const combo = detectCombo(sl)
@@ -236,7 +272,6 @@ export function aiChoosePlay(hand: Card[], tableCombo: Combo|null, mustFirst: bo
     return null
   }
   if (type==='ashlan') {
-    // Try to beat with quad
     for (const [,cards] of Object.entries(byRank)) { if(cards.length>=4) return cards.slice(0,4) }
     return null
   }
