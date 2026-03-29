@@ -624,7 +624,7 @@ export default function GamePage() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', padding:'10px 8px 28px', color:'#e8d5a3', fontFamily:"Georgia,serif", position:'relative', overflow:'hidden' }}>
+    <div style={{ minHeight:'100vh', padding:'10px 8px 28px', color:'#e8d5a3', fontFamily:"Roboto,-apple-system,sans-serif", position:'relative', overflow:'hidden' }}>
       <Smoke/>
       <FourSpadeEffect show={show4S}/>
       <WinEffect show={showWin} winner={gs.winner}/>

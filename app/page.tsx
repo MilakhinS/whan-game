@@ -138,9 +138,10 @@ export default function HomePage() {
     const maxP = gameMode==='team'?4:6
     await supabase.from('rooms').delete().eq('host_id', user.id).eq('status','waiting').eq('player_count',0)
     const { data, error } = await supabase.from('rooms').insert({ name:roomName.trim(), password:roomPass.trim()||null, mode:gameMode, host_id:user.id, player_count:1, max_players:maxP, status:'waiting' }).select().single()
-    if (error) { showToast('Ошибка'); setLoading(false); return }
+    if (error) { showToast('Ошибка создания'); setLoading(false); return }
     await supabase.from('room_players').insert({ room_id:data.id, player_id:user.id, seat:0, is_ready:false })
-    setRoomName(''); setRoomPass(''); setLoading(false)
+    setRoomName(''); setRoomPass('')
+    setLoading(false)
     router.push(`/room/${data.id}`)
   }
 
@@ -216,7 +217,7 @@ export default function HomePage() {
   const myRank = leaders.findIndex(l=>l.id===profile?.id)
 
   return (
-    <div style={{ minHeight:'100vh', maxWidth:600, margin:'0 auto', padding:'12px 12px 80px', position:'relative', color:T.text, fontFamily:"Georgia,'Times New Roman',serif" }}>
+    <div style={{ minHeight:'100vh', maxWidth:600, margin:'0 auto', padding:'12px 12px 80px', position:'relative', color:T.text, fontFamily:"Roboto,-apple-system,sans-serif" }}>
 
       {/* Smoke */}
       <div style={{ position:'fixed', inset:0, pointerEvents:'none', overflow:'hidden', zIndex:0 }}>
@@ -358,7 +359,7 @@ export default function HomePage() {
                     </button>
                   ))}
                 </div>
-                <button onClick={()=>{ createRoom(); setActiveTab('rooms') }} disabled={loading} style={gbtn(!loading,{padding:'14px',fontSize:15})}>
+                <button onClick={createRoom} disabled={loading} style={gbtn(!loading,{padding:'14px',fontSize:15})}>
                   {loading?'Создаём…':'🎴 Создать комнату'}
                 </button>
               </div>

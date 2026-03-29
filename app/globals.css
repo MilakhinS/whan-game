@@ -8,25 +8,19 @@ body {
   background: radial-gradient(ellipse at 30% 20%, #1a0c03 0%, #0a0800 60%, #000 100%);
   min-height: 100vh;
   color: #f2e2b0;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.5;
+  letter-spacing: 0.01em;
 }
 
-input, button { font-family: inherit; }
+input, button, textarea { font-family: 'Roboto', -apple-system, sans-serif; }
 button { cursor: pointer; }
 
-/* Улучшение читаемости текста */
-p, div, span { letter-spacing: 0.01em; }
-h1, h2, h3 { letter-spacing: 0.03em; }
-
-/* Placeholder */
-input::placeholder { color: rgba(212,170,80,0.4) !important; opacity: 1; }
-
-/* Scrollbar */
+input::placeholder { color: rgba(212,170,80,0.45) !important; opacity: 1; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-thumb { background: rgba(212,170,80,0.25); border-radius: 2px; }
 
