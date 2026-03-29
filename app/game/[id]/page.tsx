@@ -475,17 +475,20 @@ export default function GamePage() {
   // ── Inactivity cleanup: если 5 минут без хода — закрываем комнату ──
   useEffect(()=>{
     const check = setInterval(async ()=>{
-      if (!gs || gs.phase==='roundEnd') return
-      const last = gs.lastActivity ? new Date(gs.lastActivity).getTime() : 0
-      const elapsed = Date.now() - last
-      if (last > 0 && elapsed > 5 * 60 * 1000) {
+      if (!gs) return
+      // Check via DB updated_at — works even if lastActivity wasn't set
+      const { data } = await supabase.from('game_states').select('updated_at').eq('room_id',roomId).single()
+      if (!data) return
+      const lastUpdate = new Date(data.updated_at).getTime()
+      const elapsed = Date.now() - lastUpdate
+      if (elapsed > 5 * 60 * 1000) {
         await supabase.from('rooms').update({ status:'closed' }).eq('id',roomId)
         await supabase.from('room_players').delete().eq('room_id',roomId)
         router.push('/')
       }
-    }, 30000)
+    }, 60000) // check every minute
     return ()=>clearInterval(check)
-  },[gs?.lastActivity, gs?.phase, roomId])
+  },[roomId])
 
   // ── AI ── (only host controls bots)
   useEffect(()=>{
